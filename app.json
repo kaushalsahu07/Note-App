@@ -3,6 +3,7 @@
     "name": "Notes",
     "slug": "Notes",
     "version": "1.0.0",
+    "owner": "kaushalsahu.07",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

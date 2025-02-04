@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Notes",
-    "slug": "Notes",
+    "slug": "note",
     "version": "1.0.0",
     "owner": "kaushalsahu.07",
     "orientation": "portrait",
@@ -44,7 +44,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b0d40648-67f8-4d37-95ce-ed9a2dbaf150"
+        "projectId": "3bb2a51d-3e44-45b7-ba79-658fa1b38e0b"
       }
     }
   }

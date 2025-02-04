@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Notes",
+    "slug": "Notes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1c1c1e"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kaushal.notesapp",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos to save exported notes.",
+        "NSDocumentsFolderUsageDescription": "Allow $(PRODUCT_NAME) to access your documents folder to save notes."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1c1c1e"
+      },
+      "permissions": [
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "package": "com.kaushal.notesapp"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "my-notes-app",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b0d40648-67f8-4d37-95ce-ed9a2dbaf150"
+      }
+    }
+  }
+}

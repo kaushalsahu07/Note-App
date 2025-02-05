@@ -5,10 +5,10 @@
     "version": "1.0.0",
     "owner": "kaushalsahu.07",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/images/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#1c1c1e"
     },
@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#1c1c1e"
       },
       "permissions": [
@@ -44,7 +44,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "3bb2a51d-3e44-45b7-ba79-658fa1b38e0b"
+        "projectId": "2517f29e-0924-4ae1-aada-795378b1b8ac"
       }
     }
   }

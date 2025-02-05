@@ -1,50 +1,69 @@
-# Welcome to your Expo app 👋
+# Note App 📝
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A simple and intuitive note-taking application built with React Native and Expo, fully developed with the assistance of AI (Claude 3.5 Haiku/Sonnet).
 
-## Get started
+## Features
+* Create new notes with title content and selected colors 
+* Edit existing notes
+* Delete notes
+* Search through notes
+* Local storage for data persistence
+* Cross-platform (iOS & Android)
+* Share your Notes
 
-1. Install dependencies
+## Installation
 
+1. Clone the repository
+   ```bash
+   git clone https://github.com/kaushalsahu07/note-app.git
+   ```
+
+2. Navigate to project directory
+   ```bash
+   cd note-app
+   ``` 
+
+3. Install dependencies
    ```bash
    npm install
    ```
 
-2. Start the app
-
+4. Start the development server
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+5. Run on your preferred platform:
+   - Press `a` for Android
+   - Press `i` for iOS
+   - Scan QR code with Expo Go App 
+   
+## Technologies
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- React Native
+- Expo
+- React Navigation
+- AsyncStorage
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Contributing
+1. Fork the repository
+2. Create a new branch
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+3. Commit your changes
+  ```bash
+  git commit -m 'Add YourFeature'
+  ```
+4. Push to the branch
+  ```bash
+  git push origin feature/YourFeature
+  ```
+5. Open a Pull Request
 
-## Get a fresh project
+## Contact
+GitHub: [@kaushalsahu07](https://github.com/kaushalsahu07)
 
-When you're ready, run:
+Instagram: [@cd.kaushal](https://www.instagram.com/cd.kaushal?igsh=cTVram1ia3Vvamxz)
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Portfolio: [Website Link ](https://kaushalsahu07.github.io/portfolio/)

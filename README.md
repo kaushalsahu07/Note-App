@@ -52,13 +52,13 @@ A simple and intuitive note-taking application built with React Native and Expo,
    git checkout -b feature/YourFeature
    ```
 3. Commit your changes
-  ```bash
-  git commit -m 'Add YourFeature'
-  ```
+   ```bash
+   git commit -m 'Add YourFeature'
+   ```
 4. Push to the branch
-  ```bash
-  git push origin feature/YourFeature
-  ```
+   ```bash
+   git push origin feature/YourFeature
+   ```
 5. Open a Pull Request
 
 ## Contact

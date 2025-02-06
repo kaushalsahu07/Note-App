@@ -8,7 +8,6 @@ A simple and intuitive note-taking application built with React Native and Expo,
 * Delete notes
 * Search through notes
 * Local storage for data persistence
-* Cross-platform (iOS & Android)
 * Share your Notes
 
 ## Installation

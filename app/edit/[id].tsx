@@ -13,9 +13,13 @@ export default function EditNoteScreen() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [originalNote, setOriginalNote] = useState<Note | null>(null);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
-    loadNoteData();
+    if (id) {
+      loadNoteData();
+    }
   }, [id]);
 
   const loadNoteData = async () => {
@@ -26,6 +30,8 @@ export default function EditNoteScreen() {
         setTitle(note.title);
         setContent(note.content);
         setSelectedColor(note.color);
+        setIsPasswordProtected(!!note.isPasswordProtected);
+        setPassword(note.password || '');
         setOriginalNote(note);
       } else {
         Alert.alert('Error', 'Note not found');
@@ -51,26 +57,29 @@ export default function EditNoteScreen() {
       return;
     }
 
+    if (isPasswordProtected && !password.trim()) {
+      Alert.alert('Error', 'Please enter a password');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      if (!originalNote) {
-        throw new Error('Original note not found');
-      }
-
-      const updatedNoteData: Note = {
-        ...originalNote,
+      const updatedNote = {
+        ...originalNote!,
         title: title.trim(),
         content: content.trim(),
-        color: selectedColor,
         lastModified: new Date().toISOString(),
+        color: selectedColor,
+        isPasswordProtected,
+        password: isPasswordProtected ? password.trim() : undefined
       };
 
-      const success = await updateNote(updatedNoteData);
+      const success = await updateNote(updatedNote);
       if (success) {
         router.back();
       } else {
-        Alert.alert('Error', 'Failed to save changes');
+        Alert.alert('Error', 'Failed to update note');
       }
     } catch (error) {
       console.error('Error updating note:', error);

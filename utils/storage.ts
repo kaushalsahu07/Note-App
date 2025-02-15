@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NOTES_KEY = '@notes_v1';
+const PASSWORDS_KEY = 'saved_passwords';
 
 export interface Note {
   id: string;
@@ -9,6 +10,13 @@ export interface Note {
   date: string;
   color: string;
   lastModified: string;
+}
+
+interface SavedPassword {
+  id: string;
+  title: string;
+  password: string;
+  date: string;
 }
 
 export async function saveNote(note: Note) {
@@ -60,6 +68,27 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error updating note:', error);
+    return false;
+  }
+}
+
+export async function savePasswordToManager(title: string, password: string) {
+  try {
+    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
+    let passwords: SavedPassword[] = savedPasswords ? JSON.parse(savedPasswords) : [];
+    
+    const newPassword: SavedPassword = {
+      id: Date.now().toString(),
+      title,
+      password,
+      date: new Date().toLocaleDateString(),
+    };
+    
+    passwords = [newPassword, ...passwords];
+    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+    return true;
+  } catch (error) {
+    console.error('Error saving password:', error);
     return false;
   }
 }

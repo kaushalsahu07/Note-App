@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { saveNote } from '../../utils/storage';
+import { saveNote, savePasswordToManager } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 
 const COLORS = ['#ffb3ba', '#baffc9', '#bae1ff', '#ffffba', '#e6baff'];
@@ -12,6 +12,8 @@ export default function NewNoteScreen() {
   const [content, setContent] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [password, setPassword] = useState('');
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -40,6 +42,9 @@ export default function NewNoteScreen() {
 
       const success = await saveNote(newNote);
       if (success) {
+        if (isPasswordProtected && password) {
+          await savePasswordToManager(title, password);
+        }
         router.back();
       } else {
         Alert.alert('Error', 'Failed to save note');

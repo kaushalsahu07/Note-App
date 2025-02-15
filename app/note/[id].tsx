@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { exportNotesToFile } from '../../utils/exportNotes';
+import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 
 export default function EditNoteScreen() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function EditNoteScreen() {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [originalNote, setOriginalNote] = useState<Note | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -25,9 +28,15 @@ export default function EditNoteScreen() {
       const notes = await loadNotes();
       const note = notes.find(n => n.id === id);
       if (note) {
-        setTitle(note.title);
-        setContent(note.content);
-        setOriginalNote(note);
+        if (note.isPasswordProtected) {
+          setIsLocked(true);
+          setShowPasswordDialog(true);
+          setOriginalNote(note);
+        } else {
+          setTitle(note.title);
+          setContent(note.content);
+          setOriginalNote(note);
+        }
       } else {
         Alert.alert('Error', 'Note not found');
         router.back();
@@ -36,6 +45,17 @@ export default function EditNoteScreen() {
       console.error('Error loading note:', error);
       Alert.alert('Error', 'Failed to load note');
       router.back();
+    }
+  };
+
+  const handleVerifyPassword = (password: string) => {
+    if (originalNote?.password === password) {
+      setIsLocked(false);
+      setShowPasswordDialog(false);
+      setTitle(originalNote.title);
+      setContent(originalNote.content);
+    } else {
+      Alert.alert('Error', 'Incorrect password');
     }
   };
 
@@ -107,6 +127,33 @@ export default function EditNoteScreen() {
       router.back();
     }
   };
+
+  if (isLocked) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Protected Note</Text>
+        </View>
+
+        <View style={styles.lockedContent}>
+          <Ionicons name="lock-closed" size={48} color="#666" />
+          <Text style={styles.lockedText}>This note is password protected</Text>
+        </View>
+
+        <AccessPasswordDialog
+          visible={showPasswordDialog}
+          onClose={() => {
+            setShowPasswordDialog(false);
+            router.back();
+          }}
+          onVerifyPassword={handleVerifyPassword}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -219,5 +266,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     padding: 16,
     textAlignVertical: 'top',
-  }
+  },
+  lockedContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  lockedText: {
+    color: '#666',
+    fontSize: 16,
+  },
 });

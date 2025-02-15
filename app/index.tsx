@@ -1,12 +1,15 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, RefreshControl, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
 import { loadNotes, Note, deleteNote } from '../utils/storage';
-import { exportSelectedNotesToFile } from '../utils/exportNotes';
 import { Ionicons } from '@expo/vector-icons';
+import PasswordManager from '../components/PasswordManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const USERNAME_KEY = 'user_name';
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -14,8 +17,39 @@ export default function NotesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [username, setUsername] = useState('');
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
+
+  useEffect(() => {
+    checkUsername();
+  }, []);
+
+  const checkUsername = async () => {
+    try {
+      const savedUsername = await AsyncStorage.getItem(USERNAME_KEY);
+      if (savedUsername) {
+        setUsername(savedUsername);
+      } else {
+        setShowUsernameModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+    }
+  };
+
+  const saveUsername = async () => {
+    if (!tempUsername.trim()) {
+      return;
+    }
+    try {
+      await AsyncStorage.setItem(USERNAME_KEY, tempUsername.trim());
+      setUsername(tempUsername.trim());
+      setShowUsernameModal(false);
+    } catch (error) {
+      console.error('Error saving username:', error);
+    }
+  };
 
   const loadStoredNotes = async () => {
     setIsLoading(true);
@@ -65,46 +99,6 @@ export default function NotesScreen() {
     );
   };
 
-  const handleExport = async () => {
-    if (!isSelectionMode) {
-      setIsSelectionMode(true);
-      return;
-    }
-
-    if (selectedNotes.length === 0) {
-      Alert.alert('Error', 'Please select at least one note to export');
-      return;
-    }
-
-    try {
-      const notesToExport = notes.filter(note => selectedNotes.includes(note.id));
-      await exportSelectedNotesToFile(notesToExport);
-      Alert.alert('Success', 'Selected notes exported successfully');
-      setIsSelectionMode(false);
-      setSelectedNotes([]);
-    } catch (error) {
-      console.error('Error exporting notes:', error);
-      Alert.alert('Error', 'Failed to export notes');
-    }
-  };
-
-  const toggleNoteSelection = (noteId: string) => {
-    if (!isSelectionMode) return;
-
-    setSelectedNotes(prev => {
-      if (prev.includes(noteId)) {
-        return prev.filter(id => id !== noteId);
-      } else {
-        return [...prev, noteId];
-      }
-    });
-  };
-
-  const cancelSelection = () => {
-    setIsSelectionMode(false);
-    setSelectedNotes([]);
-  };
-
   const filteredNotes = notes.filter(note => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -113,33 +107,18 @@ export default function NotesScreen() {
     );
   });
 
+  const handleChangeUsername = () => {
+    setTempUsername(username);
+    setShowUsernameModal(true);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Notes</Text>
-        <View style={styles.headerRight}>
-          {isSelectionMode && (
-            <>
-              <TouchableOpacity 
-                style={styles.headerButton} 
-                onPress={cancelSelection}
-              >
-                <Text style={styles.cancelButton}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.selectionCount}>
-                {selectedNotes.length} selected
-              </Text>
-            </>
-          )}
-          <TouchableOpacity 
-            style={styles.exportButton} 
-            onPress={handleExport}
-          >
-            <Ionicons 
-              name={isSelectionMode ? "checkmark" : "share-outline"} 
-              size={24} 
-              color="#007AFF" 
-            />
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greetingHey}>Hey,</Text>
+          <TouchableOpacity onPress={handleChangeUsername} activeOpacity={0.7}>
+            <Text style={styles.greetingName}>{username}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -150,15 +129,15 @@ export default function NotesScreen() {
         placeholder="Search notes..."
       />
 
+      {!searchQuery && <PasswordManager />}
+
       <FlatList
         data={filteredNotes}
         renderItem={({ item }) => (
           <NoteCard
             note={item}
             onDelete={() => handleDeleteNote(item.id)}
-            onPress={() => isSelectionMode ? toggleNoteSelection(item.id) : router.push(`/note/${item.id}`)}
-            isSelected={selectedNotes.includes(item.id)}
-            isSelectionMode={isSelectionMode}
+            onPress={() => router.push(`/note/${item.id}`)}
           />
         )}
         keyExtractor={item => item.id}
@@ -174,8 +153,12 @@ export default function NotesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No notes yet</Text>
-            <Text style={styles.emptyStateSubtext}>Tap + to create one</Text>
+            <Text style={styles.emptyStateText}>
+              {searchQuery ? 'No matching notes' : 'No notes yet'}
+            </Text>
+            <Text style={styles.emptyStateSubtext}>
+              {searchQuery ? 'Try a different search' : 'Tap + to create one'}
+            </Text>
           </View>
         }
       />
@@ -186,6 +169,54 @@ export default function NotesScreen() {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
+      <Modal
+        visible={showUsernameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (username) setShowUsernameModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {username ? 'Change Username' : 'Welcome!'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {username ? 'Enter new username' : "What's your name?"}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={tempUsername}
+              onChangeText={setTempUsername}
+              placeholder="Enter your name"
+              placeholderTextColor="#666"
+              autoFocus
+              onSubmitEditing={saveUsername}
+            />
+            <View style={styles.modalButtons}>
+              {username && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowUsernameModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.saveButton, !tempUsername.trim() && styles.saveButtonDisabled]}
+                onPress={saveUsername}
+                disabled={!tempUsername.trim()}
+              >
+                <Text style={styles.saveButtonText}>
+                  {username ? 'Save Changes' : 'Continue'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -196,36 +227,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#1c1c1e',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+  greetingContainer: {
+    gap: 4,
   },
-  title: {
+  greetingHey: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#fff',
+    opacity: 0.9,
+  },
+  greetingName: {
     fontSize: 34,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  headerButton: {
-    paddingHorizontal: 8,
-  },
-  cancelButton: {
-    color: '#007AFF',
-    fontSize: 17,
-  },
-  selectionCount: {
-    color: '#666',
-    fontSize: 17,
-  },
-  exportButton: {
-    padding: 8,
+    letterSpacing: -0.5,
   },
   notesList: {
     padding: 8,
@@ -270,5 +289,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 8,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#2c2c2e',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

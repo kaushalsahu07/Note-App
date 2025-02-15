@@ -10,24 +10,15 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1c1c1e"
+      "backgroundColor": "#0b0b0b"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.kaushal.notesapp",
-      "buildNumber": "1.0.0",
-      "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos to save exported notes.",
-        "NSDocumentsFolderUsageDescription": "Allow $(PRODUCT_NAME) to access your documents folder to save notes."
-      }
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#1c1c1e"
+        "backgroundColor": "#0b0b0b"
       },
       "permissions": [
         "WRITE_EXTERNAL_STORAGE",

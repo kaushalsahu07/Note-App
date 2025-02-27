@@ -40,11 +40,9 @@ A simple and intuitive note-taking application built with React Native and Expo,
    - Scan QR code with Expo Go App 
    
 ## Technologies
-
-- React Native
-- Expo
-- React Navigation
-- AsyncStorage
+- React Native + Expo
+- Cursor Ai Code Editor 
+- Claude 3.7 Sonnet
 
 ## Contributing
 1. Fork the repository

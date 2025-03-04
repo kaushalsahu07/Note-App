@@ -1,11 +1,12 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { loadNotes, updateNote, Note } from '../../utils/storage';
+import { loadNotes, updateNote, Note, TodoItem } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { exportNotesToFile } from '../../utils/exportNotes';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
+import TodoList from '../../components/TodoList';
 
 export default function EditNoteScreen() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function EditNoteScreen() {
       setShowPasswordDialog(false);
       setTitle(originalNote.title);
       setContent(originalNote.content);
+      setTasks(originalNote.tasks || []);
     } else {
       Alert.alert('Error', 'Incorrect password');
     }
@@ -189,23 +191,25 @@ export default function EditNoteScreen() {
         </View>
       </View>
 
-      <TextInput
-        style={styles.titleInput}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Title"
-        placeholderTextColor="#666"
-        maxLength={100}
-      />
+      <ScrollView style={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <TextInput
+          style={styles.titleInput}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Title"
+          placeholderTextColor="#666"
+          maxLength={100}
+        />
 
-      <TextInput
-        style={styles.contentInput}
-        value={content}
-        onChangeText={setContent}
-        placeholder="Type something..."
-        placeholderTextColor="#666"
-        multiline
-      />
+        <TextInput
+          style={styles.contentInput}
+          value={content}
+          onChangeText={setContent}
+          placeholder="Type something..."
+          placeholderTextColor="#666"
+          multiline
+        />
+      </ScrollView>
     </View>
   );
 }
@@ -253,6 +257,9 @@ const styles = StyleSheet.create({
   saveButtonDisabled: {
     opacity: 0.5,
   },
+  scrollContainer: {
+    flex: 1,
+  },
   titleInput: {
     fontSize: 24,
     fontWeight: '600',
@@ -261,11 +268,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   contentInput: {
-    flex: 1,
     fontSize: 17,
     color: '#fff',
     padding: 16,
     textAlignVertical: 'top',
+    minHeight: 300, // Ensures there's always scrollable space
   },
   lockedContent: {
     flex: 1,

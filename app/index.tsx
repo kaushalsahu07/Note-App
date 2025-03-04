@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, Note, deleteNote } from '../utils/storage';
+import { loadNotes, Note, deleteNote, updateNote, setNotesChangeListener } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import PasswordManager from '../components/PasswordManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,11 +20,13 @@ export default function NotesScreen() {
   const [username, setUsername] = useState('');
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
-
+  
   useEffect(() => {
     checkUsername();
+    loadStoredNotes();
+    setNotesChangeListener(setNotes);
   }, []);
-
+  
   const checkUsername = async () => {
     try {
       const savedUsername = await AsyncStorage.getItem(USERNAME_KEY);
@@ -37,7 +39,7 @@ export default function NotesScreen() {
       console.error('Error checking username:', error);
     }
   };
-
+  
   const saveUsername = async () => {
     if (!tempUsername.trim()) {
       return;
@@ -50,7 +52,7 @@ export default function NotesScreen() {
       console.error('Error saving username:', error);
     }
   };
-
+  
   const loadStoredNotes = async () => {
     setIsLoading(true);
     try {
@@ -63,7 +65,7 @@ export default function NotesScreen() {
       setIsLoading(false);
     }
   };
-
+  
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -72,11 +74,33 @@ export default function NotesScreen() {
       setRefreshing(false);
     }
   }, []);
-
+  
   useEffect(() => {
     loadStoredNotes();
   }, []);
-
+  
+  const handleTaskToggle = async (noteId: string, taskId: string) => {
+    const noteToUpdate = notes.find(note => note.id === noteId);
+    if (!noteToUpdate || !noteToUpdate.tasks) return;
+  
+    const updatedTasks = noteToUpdate.tasks.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
+  
+    const updatedNote = {
+      ...noteToUpdate,
+      tasks: updatedTasks,
+      lastModified: new Date().toISOString()
+    };
+  
+    const success = await updateNote(updatedNote);
+    if (success) {
+      setNotes(notes.map(note =>
+        note.id === noteId ? updatedNote : note
+      ));
+    }
+  };
+  
   const handleDeleteNote = async (noteId: string) => {
     Alert.alert(
       'Delete Note',
@@ -98,7 +122,7 @@ export default function NotesScreen() {
       ]
     );
   };
-
+  
   const filteredNotes = notes.filter(note => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -106,12 +130,12 @@ export default function NotesScreen() {
       note.content.toLowerCase().includes(searchLower)
     );
   });
-
+  
   const handleChangeUsername = () => {
     setTempUsername(username);
     setShowUsernameModal(true);
   };
-
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -122,22 +146,23 @@ export default function NotesScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
+  
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Search notes..."
       />
-
+  
       {!searchQuery && <PasswordManager />}
-
+  
       <FlatList
         data={filteredNotes}
         renderItem={({ item }) => (
           <NoteCard
             note={item}
             onDelete={() => handleDeleteNote(item.id)}
-            onPress={() => router.push(`/note/${item.id}`)}
+            onPress={() => router.push(item.tasks ? `/edit/todo/${item.id}` : `/note/${item.id}`)}
+            onTaskToggle={handleTaskToggle}
           />
         )}
         keyExtractor={item => item.id}
@@ -162,14 +187,14 @@ export default function NotesScreen() {
           </View>
         }
       />
-
+  
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/new')}
+        onPress={() => router.push('/select-type')}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
-
+  
       <Modal
         visible={showUsernameModal}
         transparent

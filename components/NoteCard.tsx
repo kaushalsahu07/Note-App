@@ -9,6 +9,7 @@ interface NoteCardProps {
   onPress: () => void;
   isSelected?: boolean;
   isSelectionMode?: boolean;
+  onTaskToggle?: (noteId: string, taskId: string) => void;
 }
 
 export default function NoteCard({ 
@@ -16,7 +17,8 @@ export default function NoteCard({
   onDelete, 
   onPress, 
   isSelected = false,
-  isSelectionMode = false 
+  isSelectionMode = false,
+  onTaskToggle
 }: NoteCardProps) {
   const router = useRouter();
 
@@ -45,9 +47,41 @@ export default function NoteCard({
         <Text style={styles.title} numberOfLines={2}>
           {note.title}
         </Text>
-        <Text style={styles.content} numberOfLines={3}>
-          {note.content}
-        </Text>
+        {note.tasks ? (
+          <View style={styles.tasksContainer}>
+            {note.tasks.slice(0, 3).map((task, index) => (
+              <View key={task.id} style={styles.taskItem}>
+                <TouchableOpacity
+                  style={[styles.taskCheckbox, task.completed && styles.taskCheckboxCompleted]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onTaskToggle?.(note.id, task.id);
+                  }}
+                >
+                  {task.completed && <Ionicons name="checkmark" size={12} color="#fff" />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onTaskToggle?.(note.id, task.id);
+                  }}
+                  style={styles.taskTextContainer}
+                >
+                  <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]} numberOfLines={1}>
+                    {task.text}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {note.tasks.length > 3 && (
+              <Text style={styles.moreTasksText}>{note.tasks.length - 3} more tasks...</Text>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.content} numberOfLines={3}>
+            {note.content}
+          </Text>
+        )}
         <Text style={styles.date}>{note.date}</Text>
       </View>
       {!isSelectionMode && (
@@ -116,6 +150,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    position: 'relative',
+    paddingBottom: 20,
   },
   title: {
     fontSize: 20,
@@ -133,13 +169,62 @@ const styles = StyleSheet.create({
     color: '#666',
     position: 'absolute',
     bottom: 0,
-    left: 0,
+    right: 0,
     padding: 0,
+  },
+  tasksContainer: {
+    marginBottom: 15,
+  },
+  moreTasksText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    marginBottom: 4,
   },
   deleteButton: {
     position: 'absolute',
     top: 8,
     right: 8,
     padding: 8,
+  },
+  tasksList: {
+    marginBottom: 8,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  taskCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#333',
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  taskCheckboxCompleted: {
+    backgroundColor: '#333',
+    borderColor: '#333',
+  },
+  taskText: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
+  },
+  taskTextCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
+  tasksRemainingText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  taskTextContainer: {
+    flex: 1,
+    paddingVertical: 4, // Added for better touch target
   },
 });

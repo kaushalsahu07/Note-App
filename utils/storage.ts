@@ -3,6 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const NOTES_KEY = '@notes_v1';
 const PASSWORDS_KEY = 'saved_passwords';
 
+export interface TodoItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -10,6 +16,7 @@ export interface Note {
   date: string;
   color: string;
   lastModified: string;
+  tasks?: TodoItem[];
 }
 
 interface SavedPassword {
@@ -19,12 +26,23 @@ interface SavedPassword {
   date: string;
 }
 
+let notesChangeCallback: ((notes: Note[]) => void) | null = null;
+
+export function setNotesChangeListener(callback: (notes: Note[]) => void) {
+  notesChangeCallback = callback;
+}
+
+export function removeNotesChangeListener() {
+  notesChangeCallback = null;
+}
+
 export async function saveNote(note: Note) {
   try {
     const existingNotes = await loadNotes();
     const updatedNotes = [note, ...existingNotes];
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
     console.log('Note saved successfully:', note);
+    notesChangeCallback?.(updatedNotes);
     return true;
   } catch (error) {
     console.error('Error saving note:', error);
@@ -50,6 +68,7 @@ export async function deleteNote(id: string): Promise<boolean> {
     const updatedNotes = notes.filter(note => note.id !== id);
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
     console.log('Note deleted:', id);
+    notesChangeCallback?.(updatedNotes);
     return true;
   } catch (error) {
     console.error('Error deleting note:', error);
@@ -65,6 +84,7 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
     );
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
     console.log('Note updated:', updatedNote.id);
+    notesChangeCallback?.(updatedNotes);
     return true;
   } catch (error) {
     console.error('Error updating note:', error);

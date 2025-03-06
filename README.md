@@ -3,9 +3,8 @@
 A simple and intuitive note-taking application built with React Native and Expo, fully developed with the assistance of AI (Claude 3.5 Haiku/Sonnet).
 
 ## Features
-* Create new notes with title content and selected colors 
-* Edit existing notes
-* Delete notes
+* Create new notes with title content and selected colors
+* Backup and Restore the Notes, Todo lists & Passwords
 * Search through notes
 * Create a ToDo list 
 * Local storage for data persistence

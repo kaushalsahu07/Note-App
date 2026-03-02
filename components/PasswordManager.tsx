@@ -1,21 +1,13 @@
+import { CustomAlert as Alert } from './CustomAlert';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Modal, 
-  FlatList, 
-  Alert,
-  TextInput,
-  Dimensions,
-  TouchableWithoutFeedback,
-  Keyboard
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+import { Colors } from '../constants/Colors';
 
+// ─── Types ──────────────────────────────────────────────────────────
 interface SavedPassword {
   id: string;
   title: string;
@@ -26,875 +18,882 @@ interface SavedPassword {
 }
 
 const PASSWORDS_KEY = 'saved_passwords';
-const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BIOMETRIC_ENABLED = 'biometric_enabled';
 
+// ─── Category accent colors ──────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, string> = {
+  General: '#818CF8',
+  Social: '#F472B6',
+  Work: '#38BDF8',
+  Finance: '#34D399',
+  Shopping: '#FBBF24',
+  Other: '#A78BFA',
+};
+const categoryColor = (cat?: string) =>
+  CATEGORY_COLORS[cat ?? 'General'] ?? Colors.dark.accent;
+
+// ────────────────────────────────────────────────────────────────────
 export default function PasswordManager() {
   const [isVisible, setIsVisible] = useState(false);
   const [passwords, setPasswords] = useState<SavedPassword[]>([]);
-  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
-  const [showAddPassword, setShowAddPassword] = useState(false);
-  const [newPasswordTitle, setNewPasswordTitle] = useState('');
+  const [showPasswords, setShowPasswords] = useState<{ [k: string]: boolean }>({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [category, setCategory] = useState('');
-  const [editingPassword, setEditingPassword] = useState<SavedPassword | null>(null);
+  const [newCategory, setNewCategory] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [editItem, setEditItem] = useState<SavedPassword | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+  const [showEditPw, setShowEditPw] = useState(false);
+  const [isBioSupported, setIsBioSupported] = useState(false);
+  const [isBioEnabled, setIsBioEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showEditPassword, setShowEditPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredPasswords = passwords.filter(password => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      password.title.toLowerCase().includes(searchLower) ||
-      (password.category || '').toLowerCase().includes(searchLower)
-    );
-  });
-
+  // ─── Init ────────────────────────────────────────────────────────
   useEffect(() => {
-    checkBiometricSupport();
-    loadBiometricSettings();
+    checkBioSupport();
+    loadBioSettings();
   }, []);
 
-  const checkBiometricSupport = async () => {
-    const compatible = await LocalAuthentication.hasHardwareAsync();
-    setIsBiometricSupported(compatible);
+  const checkBioSupport = async () => setIsBioSupported(await LocalAuthentication.hasHardwareAsync());
+  const loadBioSettings = async () => {
+    const v = await AsyncStorage.getItem(BIOMETRIC_ENABLED);
+    setIsBioEnabled(v === 'true');
   };
 
-  const loadBiometricSettings = async () => {
-    try {
-      const enabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
-      setIsBiometricEnabled(enabled === 'true');
-    } catch (error) {
-      console.error('Error loading biometric settings:', error);
-    }
-  };
-
+  // ─── Biometric ──────────────────────────────────────────────────
   const toggleBiometric = async () => {
-    try {
-      if (!isBiometricEnabled) {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Authenticate to enable biometric lock',
-          fallbackLabel: 'Use passcode',
-          disableDeviceFallback: false,
-        });
-
-        if (!result.success) {
-          return;
-        }
-      }
-
-      const newValue = !isBiometricEnabled;
-      await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, String(newValue));
-      setIsBiometricEnabled(newValue);
-    } catch (error) {
-      console.error('Error toggling biometric:', error);
-    }
-  };
-
-  const authenticate = async () => {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to access passwords',
+    if (!isBioEnabled) {
+      const r = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to enable biometric lock',
         fallbackLabel: 'Use passcode',
         disableDeviceFallback: false,
       });
-
-      if (result.success) {
-        setIsVisible(true);
-        loadPasswords();
-      } else {
-        Alert.alert('Authentication Failed', 'Please try again');
-      }
-    } catch (error) {
-      console.error('Authentication error:', error);
-      Alert.alert('Error', 'Failed to authenticate');
+      if (!r.success) return;
     }
+    const next = !isBioEnabled;
+    await AsyncStorage.setItem(BIOMETRIC_ENABLED, String(next));
+    setIsBioEnabled(next);
   };
 
-  const handleManagerPress = async () => {
-    if (isBiometricSupported && isBiometricEnabled) {
-      authenticate();
-    } else {
-      setIsVisible(true);
-      loadPasswords();
-    }
+  const authenticate = async () => {
+    const r = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to access passwords',
+      fallbackLabel: 'Use passcode',
+      disableDeviceFallback: false,
+    });
+    if (r.success) { setIsVisible(true); loadPasswords(); }
+    else Alert.alert('Authentication Failed', 'Please try again');
   };
 
+  const handleOpen = () => {
+    if (isBioSupported && isBioEnabled) authenticate();
+    else { setIsVisible(true); loadPasswords(); }
+  };
+
+  // ─── CRUD ────────────────────────────────────────────────────────
   const loadPasswords = async () => {
-    try {
-      const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
-      if (savedPasswords) {
-        setPasswords(JSON.parse(savedPasswords));
-      }
-    } catch (error) {
-      console.error('Error loading passwords:', error);
-      Alert.alert('Error', 'Failed to load passwords');
-    }
+    const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
+    if (raw) setPasswords(JSON.parse(raw));
   };
 
-  const saveNewPassword = async () => {
-    if (!newPasswordTitle.trim() || !newPassword.trim()) {
-      Alert.alert('Error', 'Please enter both Username/Email and password');
+  const persist = async (list: SavedPassword[]) => {
+    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(list));
+    setPasswords(list);
+  };
+
+  const saveNew = async () => {
+    if (!newTitle.trim() || !newPassword.trim()) {
+      Alert.alert('Error', 'Please enter both a title and password');
       return;
     }
-
-    try {
-      const newPasswordEntry: SavedPassword = {
-        id: Date.now().toString(),
-        title: newPasswordTitle.trim(),
-        password: newPassword.trim(),
-        date: new Date().toLocaleDateString(),
-        category: category.trim() || 'General',
-        lastModified: new Date().toISOString()
-      };
-
-      const updatedPasswords = [newPasswordEntry, ...passwords];
-      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(updatedPasswords));
-      setPasswords(updatedPasswords);
-      resetForm();
-      Alert.alert('Success', 'Password saved successfully');
-    } catch (error) {
-      console.error('Error saving password:', error);
-      Alert.alert('Error', 'Failed to save password');
-    }
+    const entry: SavedPassword = {
+      id: Date.now().toString(),
+      title: newTitle.trim(),
+      password: newPassword.trim(),
+      date: new Date().toLocaleDateString(),
+      category: newCategory.trim() || 'General',
+      lastModified: new Date().toISOString(),
+    };
+    await persist([entry, ...passwords]);
+    resetAdd();
+    Alert.alert('Saved', 'Password saved successfully');
   };
 
-  const resetForm = () => {
-    setNewPasswordTitle('');
-    setNewPassword('');
-    setCategory('');
-    setShowAddPassword(false);
-    Keyboard.dismiss();
+  const resetAdd = () => {
+    setNewTitle(''); setNewPassword('');
+    setNewCategory(''); setShowAdd(false);
+    setShowNewPw(false); Keyboard.dismiss();
   };
 
-  const deletePassword = async (id: string) => {
-    Alert.alert(
-      'Delete Password',
-      'Are you sure you want to delete this password?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const updatedPasswords = passwords.filter(p => p.id !== id);
-              await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(updatedPasswords));
-              setPasswords(updatedPasswords);
-            } catch (error) {
-              console.error('Error deleting password:', error);
-              Alert.alert('Error', 'Failed to delete password');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleEditPress = (password: SavedPassword) => {
-    setEditingPassword(password);
-    setEditTitle(password.title);
-    setEditPassword(password.password);
-    setEditCategory(password.category || '');
+  const handleEdit = (item: SavedPassword) => {
+    setEditItem(item);
+    setEditTitle(item.title);
+    setEditPassword(item.password);
+    setEditCategory(item.category || '');
     setShowEditModal(true);
   };
 
-  const handleUpdate = async () => {
-    if (!editingPassword) return;
-
+  const saveEdit = async () => {
+    if (!editItem) return;
     if (!editTitle.trim() || !editPassword.trim()) {
-      Alert.alert('Error', 'Please enter both title and password');
+      Alert.alert('Error', 'Title and password are required');
       return;
     }
-
-    try {
-      const updatedPasswords = passwords.map(p => 
-        p.id === editingPassword.id 
-          ? {
-              ...p,
-              title: editTitle.trim(),
-              password: editPassword.trim(),
-              category: editCategory.trim() || 'General',
-              lastModified: new Date().toISOString()
-            }
-          : p
-      );
-
-      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(updatedPasswords));
-      setPasswords(updatedPasswords);
-      closeEditModal();
-      Alert.alert('Success', 'Password updated successfully');
-    } catch (error) {
-      console.error('Error updating password:', error);
-      Alert.alert('Error', 'Failed to update password');
-    }
+    const updated = passwords.map(p =>
+      p.id === editItem.id
+        ? {
+          ...p, title: editTitle.trim(), password: editPassword.trim(),
+          category: editCategory.trim() || 'General',
+          lastModified: new Date().toISOString()
+        }
+        : p
+    );
+    await persist(updated);
+    closeEdit();
+    Alert.alert('Updated', 'Password updated successfully');
   };
 
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setEditingPassword(null);
-    setEditTitle('');
-    setEditPassword('');
-    setEditCategory('');
+  const closeEdit = () => {
+    setShowEditModal(false); setEditItem(null);
+    setEditTitle(''); setEditPassword(''); setEditCategory('');
+    setShowEditPw(false);
   };
 
-  const renderPasswordItem = ({ item }: { item: SavedPassword }) => (
-    <View style={styles.passwordItem}>
-      <View style={styles.passwordHeader}>
-        <View style={styles.passwordTitleContainer}>
-          <Text style={styles.passwordTitle}>{item.title}</Text>
-          {item.category && (
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+  const deletePassword = (id: string) => {
+    Alert.alert('Delete Password', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => { await persist(passwords.filter(p => p.id !== id)); },
+      },
+    ]);
+  };
+
+  // ─── Filtered list ───────────────────────────────────────────────
+  const filtered = passwords.filter(p => {
+    const q = searchQuery.toLowerCase();
+    return p.title.toLowerCase().includes(q) || (p.category ?? '').toLowerCase().includes(q);
+  });
+
+  // ─── Password item ───────────────────────────────────────────────
+  const renderItem = ({ item, index }: { item: SavedPassword; index: number }) => {
+    const cc = categoryColor(item.category);
+    return (
+      <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
+        <View style={[styles.pwCard, { borderColor: `${cc}40` }]}>
+          {/* Left accent bar */}
+          <View style={[styles.pwAccentBar, { backgroundColor: cc }]} />
+
+          <View style={styles.pwMain}>
+            {/* Header */}
+            <View style={styles.pwHeader}>
+              <View style={styles.pwTitleWrap}>
+                <Text style={styles.pwTitle} numberOfLines={1}>{item.title}</Text>
+                {item.category ? (
+                  <View style={[styles.catPill, { backgroundColor: `${cc}20`, borderColor: `${cc}45` }]}>
+                    <Text style={[styles.catText, { color: cc }]}>{item.category}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.pwDate}>{item.date}</Text>
             </View>
-          )}
-        </View>
-        <Text style={styles.passwordDate}>{item.date}</Text>
-      </View>
-      
-      <View style={styles.passwordContent}>
-        <Text style={styles.passwordText}>
-          {showPasswords[item.id] ? item.password : '•'.repeat(item.password.length)}
-        </Text>
-        
-        <View style={styles.passwordActions}>
-          <TouchableOpacity 
-            onPress={() => setShowPasswords(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-            style={styles.actionButton}
-          >
-            <Ionicons 
-              name={showPasswords[item.id] ? "eye-off" : "eye"} 
-              size={20} 
-              color="#007AFF" 
-            />
-          </TouchableOpacity>
 
-          <TouchableOpacity 
-            onPress={() => handleEditPress(item)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="pencil" size={20} color="#007AFF" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={() => deletePassword(item.id)}
-            style={styles.actionButton}
-          >
-            <Ionicons name="trash" size={20} color="#FF3B30" />
-          </TouchableOpacity>
+            {/* Password row */}
+            <View style={styles.pwBody}>
+              <Text style={styles.pwValue} numberOfLines={1}>
+                {showPasswords[item.id] ? item.password : '•'.repeat(Math.min(item.password.length, 20))}
+              </Text>
+              <View style={styles.pwActions}>
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => setShowPasswords(p => ({ ...p, [item.id]: !p[item.id] }))}
+                >
+                  <Ionicons name={showPasswords[item.id] ? 'eye-off' : 'eye'} size={17} color={cc} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconBtn} onPress={() => handleEdit(item)}>
+                  <Ionicons name="pencil" size={16} color={Colors.dark.icon} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.iconBtn, styles.deleteIconBtn]} onPress={() => deletePassword(item.id)}>
+                  <Ionicons name="trash" size={16} color={Colors.dark.danger} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
-  );
+      </Animated.View>
+    );
+  };
 
+  // ─── Settings modal ──────────────────────────────────────────────
   const SettingsModal = () => (
-    <Modal
-      visible={showSettings}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowSettings(false)}
-    >
-      <View style={styles.settingsOverlay}>
-        <View style={styles.settingsContent}>
+    <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
+      <View style={styles.overlay}>
+        <Animated.View entering={ZoomIn.duration(300)} style={styles.settingsCard}>
           <View style={styles.settingsHeader}>
             <Text style={styles.settingsTitle}>Settings</Text>
-            <TouchableOpacity 
-              onPress={() => setShowSettings(false)}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={24} color="#666" />
+            <TouchableOpacity onPress={() => setShowSettings(false)} style={styles.closeBtn}>
+              <Ionicons name="close" size={20} color={Colors.dark.icon} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.settingItem}>
+          <View style={styles.settingRow}>
+            <View style={[styles.settingIcon, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
+              <Ionicons name="finger-print" size={18} color="#34D399" />
+            </View>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Biometric Authentication</Text>
-              <Text style={styles.settingDescription}>
-                {isBiometricSupported 
-                  ? `Currently ${isBiometricEnabled ? 'enabled' : 'disabled'}. Tap to ${isBiometricEnabled ? 'disable' : 'enable'}.`
-                  : 'Biometric authentication not available on this device'}
+              <Text style={styles.settingTitle}>Biometric Lock</Text>
+              <Text style={styles.settingDesc}>
+                {isBioSupported
+                  ? `${isBioEnabled ? 'Enabled' : 'Disabled'} — tap to toggle`
+                  : 'Not supported on this device'}
               </Text>
             </View>
-            {isBiometricSupported && (
-              <TouchableOpacity 
-                style={[
-                  styles.toggleButton, 
-                  isBiometricEnabled && styles.toggleButtonActive
-                ]}
+            {isBioSupported && (
+              <TouchableOpacity
+                style={[styles.toggle, isBioEnabled && styles.toggleOn]}
                 onPress={toggleBiometric}
               >
-                <View style={[
-                  styles.toggleKnob, 
-                  isBiometricEnabled && styles.toggleKnobActive
-                ]} />
+                <View style={[styles.toggleKnob, isBioEnabled && styles.toggleKnobOn]} />
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 
+  // ─── Add/Edit bottom sheet ────────────────────────────────────────
+  const SheetModal = ({
+    visible, title: sheetTitle, titleVal, onTitleChange,
+    categoryVal, onCategoryChange, pwVal, onPwChange,
+    showPw, onTogglePw, onSave, onClose,
+  }: {
+    visible: boolean; title: string; titleVal: string; onTitleChange: (v: string) => void;
+    categoryVal: string; onCategoryChange: (v: string) => void;
+    pwVal: string; onPwChange: (v: string) => void;
+    showPw: boolean; onTogglePw: () => void; onSave: () => void; onClose: () => void;
+  }) => (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.sheetOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.sheet}>
+              {/* Handle */}
+              <View style={styles.sheetHandle} />
+
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>{sheetTitle}</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                  <Ionicons name="close" size={20} color={Colors.dark.icon} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Title */}
+              <Text style={styles.fieldLabel}>Username / Email</Text>
+              <View style={styles.fieldInput}>
+                <Ionicons name="person-outline" size={16} color={Colors.dark.icon} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.textInput}
+                  value={titleVal}
+                  onChangeText={onTitleChange}
+                  placeholder="e.g. john@example.com"
+                  placeholderTextColor={Colors.dark.icon}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {/* Category */}
+              <Text style={styles.fieldLabel}>Website / Category</Text>
+              <View style={styles.fieldInput}>
+                <Ionicons name="folder-outline" size={16} color={Colors.dark.icon} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.textInput}
+                  value={categoryVal}
+                  onChangeText={onCategoryChange}
+                  placeholder="e.g. Social, Work, Finance…"
+                  placeholderTextColor={Colors.dark.icon}
+                />
+              </View>
+
+              {/* Password */}
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={styles.fieldInput}>
+                <Ionicons name="lock-closed-outline" size={16} color={Colors.dark.icon} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[styles.textInput, { flex: 1 }]}
+                  value={pwVal}
+                  onChangeText={onPwChange}
+                  placeholder="Enter password"
+                  placeholderTextColor={Colors.dark.icon}
+                  secureTextEntry={!showPw}
+                />
+                <TouchableOpacity onPress={onTogglePw} style={{ padding: 4 }}>
+                  <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={Colors.dark.icon} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, (!titleVal.trim() || !pwVal.trim()) && { opacity: 0.4 }]}
+                onPress={onSave}
+                disabled={!titleVal.trim() || !pwVal.trim()}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Save Password</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
+  // ─── Render ──────────────────────────────────────────────────────
   return (
     <>
-      <TouchableOpacity 
-        style={styles.managerButton}
-        onPress={handleManagerPress}
-      >
-        <View style={styles.buttonContent}>
-          <Ionicons name="key" size={24} color="#007AFF" />
-          <Text style={styles.managerButtonText}>Password Manager</Text>
-          {isBiometricSupported && isBiometricEnabled && (
-            <Ionicons name="finger-print" size={24} color="#007AFF" style={styles.biometricIcon} />
+      {/* Trigger button */}
+      <TouchableOpacity style={styles.managerBtn} onPress={handleOpen} activeOpacity={0.85}>
+        <View style={styles.managerBtnIcon}>
+          <Ionicons name="key" size={18} color={Colors.dark.accent} />
+        </View>
+        <Text style={styles.managerBtnText}>Password Manager</Text>
+        <View style={styles.managerBtnRight}>
+          {isBioSupported && isBioEnabled && (
+            <Ionicons name="finger-print" size={18} color={Colors.dark.accentSecondary} />
           )}
+          <Ionicons name="chevron-forward" size={16} color={Colors.dark.icon} />
         </View>
       </TouchableOpacity>
 
-      <Modal
-        visible={isVisible}
-        animationType="slide"
-        onRequestClose={() => setIsVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setIsVisible(false)}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={24} color="#fff" />
+      {/* Main modal */}
+      <Modal visible={isVisible} animationType="slide" onRequestClose={() => setIsVisible(false)}>
+        <View style={styles.screen}>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setIsVisible(false)} style={styles.closeBtn}>
+              <Ionicons name="chevron-down" size={22} color={Colors.dark.icon} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Password Manager</Text>
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                onPress={() => setShowSettings(true)}
-                style={styles.headerButton}
-              >
-                <Ionicons name="settings-outline" size={24} color="#007AFF" />
+            <View style={styles.headerCenter}>
+              <Ionicons name="shield-checkmark" size={18} color={Colors.dark.accent} />
+              <Text style={styles.headerTitle}>Password Manager</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => setShowSettings(true)}>
+                <Ionicons name="settings-outline" size={20} color={Colors.dark.icon} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => setShowAddPassword(true)}
-                style={styles.headerButton}
+              <TouchableOpacity
+                style={[styles.iconBtn, styles.addIconBtn]}
+                onPress={() => setShowAdd(true)}
               >
-                <Ionicons name="add" size={24} color="#007AFF" />
+                <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputWrapper}>
-              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search passwords..."
-                placeholderTextColor="#666"
-              />
-              {searchQuery !== '' && (
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => setSearchQuery('')}
-                >
-                  <Ionicons name="close-circle" size={20} color="#666" />
-                </TouchableOpacity>
-              )}
-            </View>
+          {/* Search */}
+          <View style={styles.searchRow}>
+            <Ionicons name="search" size={16} color={Colors.dark.icon} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by title or category…"
+              placeholderTextColor={Colors.dark.icon}
+            />
+            {searchQuery !== '' && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={Colors.dark.icon} />
+              </TouchableOpacity>
+            )}
           </View>
 
+          {/* List */}
           {passwords.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="lock-closed" size={64} color="#666" />
-              <Text style={styles.emptyStateText}>No saved passwords</Text>
-              <TouchableOpacity 
-                onPress={() => setShowAddPassword(true)}
-                style={styles.emptyStateButton}
-              >
-                <Text style={styles.emptyStateButtonText}>Add Your First Password</Text>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="lock-closed" size={40} color={Colors.dark.accent} />
+              </View>
+              <Text style={styles.emptyTitle}>No passwords yet</Text>
+              <Text style={styles.emptySubtitle}>Tap + to add your first entry</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAdd(true)}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.emptyBtnText}>Add Password</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <FlatList
-              data={filteredPasswords}
-              renderItem={renderPasswordItem}
+              data={filtered}
+              renderItem={renderItem}
               keyExtractor={item => item.id}
-              contentContainerStyle={styles.passwordList}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons name="search" size={36} color={Colors.dark.icon} />
+                  <Text style={[styles.emptyTitle, { marginTop: 12 }]}>No results</Text>
+                </View>
+              }
             />
           )}
         </View>
-
-        <Modal
-          visible={showAddPassword}
-          transparent
-          animationType="fade"
-          onRequestClose={resetForm}
-        >
-          <TouchableWithoutFeedback onPress={resetForm}>
-            <View style={styles.addPasswordOverlay}>
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.addPasswordContent}>
-                  <View style={styles.addPasswordHeader}>
-                    <Text style={styles.addPasswordTitle}>Add New Password</Text>
-                    <TouchableOpacity onPress={resetForm}>
-                      <Ionicons name="close" size={24} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <TextInput
-                    style={styles.input}
-                    value={newPasswordTitle}
-                    onChangeText={setNewPasswordTitle}
-                    placeholder="Username or Email"
-                    placeholderTextColor="#666"
-                  />
-
-                  <TextInput
-                    style={styles.input}
-                    value={category}
-                    onChangeText={setCategory}
-                    placeholder="Website Name (Optional)"
-                    placeholderTextColor="#666"
-                  />
-
-                  <View style={styles.passwordInputContainer}>
-                    <TextInput
-                      style={styles.passwordInput}
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      placeholder="Password"
-                      placeholderTextColor="#666"
-                      secureTextEntry={!showPassword}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Ionicons
-                        name={showPassword ? "eye-off" : "eye"}
-                        size={24}
-                        color="#666"
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity 
-                    onPress={saveNewPassword}
-                    style={styles.saveButton}
-                  >
-                    <Text style={styles.saveButtonText}>Save Password</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
       </Modal>
 
-      <Modal
+      {/* Add sheet */}
+      <SheetModal
+        visible={showAdd}
+        title="Add Password"
+        titleVal={newTitle} onTitleChange={setNewTitle}
+        categoryVal={newCategory} onCategoryChange={setNewCategory}
+        pwVal={newPassword} onPwChange={setNewPassword}
+        showPw={showNewPw} onTogglePw={() => setShowNewPw(!showNewPw)}
+        onSave={saveNew}
+        onClose={resetAdd}
+      />
+
+      {/* Edit sheet */}
+      <SheetModal
         visible={showEditModal}
-        transparent
-        animationType="fade"
-        onRequestClose={closeEditModal}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.addPasswordOverlay}>
-            <View style={styles.addPasswordContent}>
-              <View style={styles.addPasswordHeader}>
-                <Text style={styles.addPasswordTitle}>Edit Password</Text>
-                <TouchableOpacity onPress={closeEditModal}>
-                  <Ionicons name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={styles.input}
-                value={editTitle}
-                onChangeText={setEditTitle}
-                placeholder="Title"
-                placeholderTextColor="#666"
-              />
-
-              <TextInput
-                style={styles.input}
-                value={editCategory}
-                onChangeText={setEditCategory}
-                placeholder="Category (Optional)"
-                placeholderTextColor="#666"
-              />
-
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={editPassword}
-                  onChangeText={setEditPassword}
-                  placeholder="Password"
-                  placeholderTextColor="#666"
-                  secureTextEntry={!showEditPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowEditPassword(!showEditPassword)}
-                >
-                  <Ionicons
-                    name={showEditPassword ? "eye-off" : "eye"}
-                    size={24}
-                    color="#666"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.editButtonsContainer}>
-                <TouchableOpacity 
-                  onPress={closeEditModal}
-                  style={[styles.editButton, styles.cancelButton]}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  onPress={handleUpdate}
-                  style={[styles.editButton, styles.updateButton]}
-                >
-                  <Text style={styles.updateButtonText}>Update</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        title="Edit Password"
+        titleVal={editTitle} onTitleChange={setEditTitle}
+        categoryVal={editCategory} onCategoryChange={setEditCategory}
+        pwVal={editPassword} onPwChange={setEditPassword}
+        showPw={showEditPw} onTogglePw={() => setShowEditPw(!showEditPw)}
+        onSave={saveEdit}
+        onClose={closeEdit}
+      />
 
       <SettingsModal />
     </>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2e'
-  },
-  searchInputWrapper: {
+
+  // ─── Trigger button ─────────────────────────────────────────────
+  managerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2c2c2e',
+    gap: 12,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    padding: 14,
+  },
+  managerBtnIcon: {
+    width: 36,
+    height: 36,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
+    backgroundColor: 'rgba(129,140,248,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  searchIcon: {
-    marginRight: 8
-  },
-  searchInput: {
+  managerBtnText: {
     flex: 1,
-    color: '#fff',
-    fontSize: 16,
-    paddingVertical: 8
+    color: Colors.dark.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
-  clearButton: {
-    padding: 4
-  },
-  managerButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#2c2c2e',
-  },
-  buttonContent: {
+  managerBtnRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 10,
+    gap: 6,
   },
-  managerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    marginLeft: 12,
-    fontWeight: '500',
-  },
-  modalContainer: {
+
+  // ─── Main screen ────────────────────────────────────────────────
+  screen: {
     flex: 1,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.dark.background,
   },
-  modalHeader: {
+
+  // ─── Header ─────────────────────────────────────────────────────
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2e',
+    borderBottomColor: Colors.dark.border,
   },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  addButton: {
-    padding: 8,
-  },
-  passwordList: {
-    padding: 16,
-  },
-  passwordItem: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  passwordHeader: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3c3c3e',
-  },
-  passwordTitleContainer: {
+  headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  passwordTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  headerTitle: {
+    color: Colors.dark.text,
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
-  categoryTag: {
-    backgroundColor: '#007AFF33',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    color: '#007AFF',
-    fontSize: 12,
-  },
-  passwordDate: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  passwordContent: {
-    padding: 12,
+  headerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  // ─── Icon buttons ────────────────────────────────────────────────
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  passwordText: {
-    color: '#fff',
-    fontSize: 14,
-    flex: 1,
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  passwordActions: {
+  addIconBtn: {
+    backgroundColor: Colors.dark.accent,
+    borderColor: Colors.dark.accent,
+  },
+  deleteIconBtn: {
+    backgroundColor: 'rgba(248,113,113,0.10)',
+    borderColor: 'rgba(248,113,113,0.25)',
+  },
+
+  // ─── Search ─────────────────────────────────────────────────────
+  searchRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    margin: 16,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: Colors.dark.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // ─── List ────────────────────────────────────────────────────────
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
     gap: 12,
   },
-  actionButton: {
-    padding: 8,
+
+  // ─── Password card ───────────────────────────────────────────────
+  pwCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
+  pwAccentBar: {
+    width: 4,
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+  },
+  pwMain: {
+    flex: 1,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  pwHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  pwTitleWrap: {
+    flex: 1,
+    gap: 5,
+  },
+  pwTitle: {
+    color: Colors.dark.text,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  catPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  catText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  pwDate: {
+    color: Colors.dark.icon,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  pwBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: Colors.dark.border,
+  },
+  pwValue: {
+    flex: 1,
+    color: Colors.dark.icon,
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  pwActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  // ─── Empty state ─────────────────────────────────────────────────
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
-  },
-  emptyStateText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addPasswordOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  addPasswordContent: {
-    backgroundColor: '#1c1c1e',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  addPasswordHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  addPasswordTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    color: '#fff',
-    fontSize: 16,
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  editButtonsContainer: {
-    flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    paddingTop: 60,
   },
-  editButton: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#2c2c2e',
-  },
-  updateButton: {
-    backgroundColor: '#007AFF',
-  },
-  cancelButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  updateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  authStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#2c2c2e',
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  authStatusText: {
-    color: '#fff',
-    fontSize: 14,
-    flex: 1,
-  },
-  biometricIcon: {
-    marginLeft: 'auto',
-  },
-  settingsOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(129,140,248,0.12)',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  settingsContent: {
-    backgroundColor: '#1c1c1e',
+  emptyTitle: {
+    color: Colors.dark.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: Colors.dark.icon,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.dark.accent,
+    borderRadius: 14,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    marginTop: 8,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // ─── Bottom sheet ────────────────────────────────────────────────
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(8,12,20,0.85)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: Colors.dark.border,
+    paddingHorizontal: 22,
+    paddingBottom: 36,
+    paddingTop: 12,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.dark.border,
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  sheetTitle: {
+    color: Colors.dark.text,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+
+  // ─── Form fields ─────────────────────────────────────────────────
+  fieldLabel: {
+    color: Colors.dark.icon,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginTop: 14,
+  },
+  fieldInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.dark.background,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.border,
+    paddingHorizontal: 14,
+  },
+  textInput: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 15,
+    color: Colors.dark.text,
+    fontWeight: '500',
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.dark.accent,
     borderRadius: 16,
-    padding: 20,
-    width: '85%',
+    paddingVertical: 15,
+    marginTop: 24,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // ─── Settings modal ──────────────────────────────────────────────
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(8,12,20,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 28,
+  },
+  settingsCard: {
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 24,
+    padding: 22,
+    width: '100%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 16,
   },
   settingsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   settingsTitle: {
-    color: '#fff',
+    color: Colors.dark.text,
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  settingItem: {
+  settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+    gap: 14,
+    paddingVertical: 10,
+  },
+  settingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   settingInfo: {
     flex: 1,
-    marginRight: 16,
   },
   settingTitle: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 4,
+    color: Colors.dark.text,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 3,
   },
-  settingDescription: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 4,
+  settingDesc: {
+    color: Colors.dark.icon,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 17,
   },
-  toggleButton: {
-    width: 51,
-    height: 31,
-    borderRadius: 15.5,
-    backgroundColor: '#2c2c2e',
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.dark.background,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
     padding: 2,
+    justifyContent: 'center',
   },
-  toggleButtonActive: {
-    backgroundColor: '#34C759',
+  toggleOn: {
+    backgroundColor: '#34D399',
+    borderColor: '#34D399',
   },
   toggleKnob: {
-    width: 27,
-    height: 27,
-    borderRadius: 13.5,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.dark.icon,
+    alignSelf: 'flex-start',
+  },
+  toggleKnobOn: {
     backgroundColor: '#fff',
-    transform: [{ translateX: 0 }],
-  },
-  toggleKnobActive: {
-    transform: [{ translateX: 20 }],
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  headerButton: {
-    padding: 4,
-  },
-  passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2c2c2e',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    color: '#fff',
-  },
-  eyeButton: {
-    padding: 12,
+    alignSelf: 'flex-end',
   },
 });

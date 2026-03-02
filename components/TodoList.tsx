@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TodoItem } from '../utils/storage';
+import { Colors } from '../constants/Colors';
 
 interface TodoListProps {
   tasks: TodoItem[];
@@ -15,27 +16,21 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
 
   const addTask = () => {
     if (!newTaskText.trim()) return;
-
     const newTask: TodoItem = {
       id: Date.now().toString(),
       text: newTaskText.trim(),
-      completed: false
+      completed: false,
     };
-
     onTasksChange([...tasks, newTask]);
     setNewTaskText('');
   };
 
   const toggleTask = (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
-    onTasksChange(updatedTasks);
+    onTasksChange(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
   };
 
   const deleteTask = (taskId: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    onTasksChange(updatedTasks);
+    onTasksChange(tasks.filter(t => t.id !== taskId));
   };
 
   const startEditing = (taskId: string, taskText: string) => {
@@ -45,25 +40,22 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
 
   const saveEdit = () => {
     if (!editingTaskId || !editingText.trim()) return;
-
-    const updatedTasks = tasks.map(task =>
-      task.id === editingTaskId ? { ...task, text: editingText.trim() } : task
-    );
-    onTasksChange(updatedTasks);
+    onTasksChange(tasks.map(t =>
+      t.id === editingTaskId ? { ...t, text: editingText.trim() } : t
+    ));
     setEditingTaskId(null);
     setEditingText('');
   };
 
   const renderItem = ({ item }: { item: TodoItem }) => (
     <View style={styles.taskItem}>
-      <TouchableOpacity 
-        style={[styles.checkbox, item.completed && styles.checkboxChecked]} 
+      <TouchableOpacity
+        style={[styles.checkbox, item.completed && styles.checkboxChecked]}
         onPress={() => toggleTask(item.id)}
       >
-        {item.completed && (
-          <Ionicons name="checkmark" size={16} color="#fff" />
-        )}
+        {item.completed && <Ionicons name="checkmark" size={14} color="#fff" />}
       </TouchableOpacity>
+
       {editingTaskId === item.id ? (
         <TextInput
           style={[styles.taskText, styles.editInput]}
@@ -75,45 +67,45 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
           returnKeyType="done"
         />
       ) : (
-        <TouchableOpacity 
-          onPress={() => startEditing(item.id, item.text)}
-          style={styles.taskTextContainer}
-        >
-          <Text style={[styles.taskText, item.completed && styles.completedTask]}>
+        <TouchableOpacity onPress={() => startEditing(item.id, item.text)} style={styles.taskTextWrap}>
+          <Text style={[styles.taskText, item.completed && styles.taskCompleted]}>
             {item.text}
           </Text>
         </TouchableOpacity>
       )}
-      <TouchableOpacity 
+
+      <TouchableOpacity
         onPress={() => deleteTask(item.id)}
-        style={styles.deleteButton}
+        style={styles.deleteBtn}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="close-circle" size={20} color="#FF453A" />
+        <Ionicons name="close-circle" size={18} color={Colors.dark.danger} />
       </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputContainer}>
+      {/* Add task input */}
+      <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
           value={newTaskText}
           onChangeText={setNewTaskText}
           placeholder="Add a new task..."
-          placeholderTextColor="#666"
+          placeholderTextColor={Colors.dark.icon}
           onSubmitEditing={addTask}
           returnKeyType="done"
         />
-        <TouchableOpacity 
-          style={[styles.addButton, !newTaskText.trim() && styles.addButtonDisabled]}
+        <TouchableOpacity
+          style={[styles.addBtn, !newTaskText.trim() && { opacity: 0.4 }]}
           onPress={addTask}
           disabled={!newTaskText.trim()}
         >
-          <Text style={styles.addButtonText}>Add</Text>
+          <Ionicons name="add" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
+
       <FlatList
         data={tasks}
         renderItem={renderItem}
@@ -121,107 +113,117 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <Ionicons name="list-outline" size={32} color={Colors.dark.icon} />
+            <Text style={styles.emptyText}>No tasks yet — add one above</Text>
+          </View>
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  taskTextContainer: {
-    flex: 1,
-  },
-  editInput: {
-    backgroundColor: '#3c3c3e',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    color: '#fff',
-  },
   container: {
     flex: 1,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.dark.background,
   },
-  inputContainer: {
+
+  // ─── Input row ───────────────────────────────────────────────
+  inputRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2e',
-    backgroundColor: '#2c2c2e',
-    borderRadius: 12,
+    alignItems: 'center',
+    gap: 10,
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#fff',
-    marginRight: 12,
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  addButtonDisabled: {
-    backgroundColor: '#2c2c2e',
-    opacity: 0.5,
-  },
-  addButtonText: {
-    color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    color: Colors.dark.text,
+    fontWeight: '500',
   },
-  list: {
-    flex: 1,
+  addBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.dark.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  // ─── List ────────────────────────────────────────────────────
+  list: { flex: 1 },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
+
+  // ─── Task item ───────────────────────────────────────────────
   taskItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2c2c2e',
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: Colors.dark.surfaceSolid,
+    marginBottom: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    gap: 12,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    marginRight: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.accent,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   checkboxChecked: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: Colors.dark.accent,
+    borderColor: Colors.dark.accent,
   },
+  taskTextWrap: { flex: 1 },
   taskText: {
     flex: 1,
-    fontSize: 16,
-    color: '#fff',
-    marginRight: 8,
+    fontSize: 15,
+    color: Colors.dark.text,
+    fontWeight: '500',
   },
-  completedTask: {
+  taskCompleted: {
     textDecorationLine: 'line-through',
-    opacity: 0.6,
+    color: Colors.dark.icon,
+    fontWeight: '400',
   },
-  deleteButton: {
-    padding: 4,
+  editInput: {
+    backgroundColor: Colors.dark.background,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  deleteBtn: { padding: 2 },
+
+  // ─── Empty ───────────────────────────────────────────────────
+  emptyWrap: {
+    alignItems: 'center',
+    paddingTop: 40,
+    gap: 10,
+  },
+  emptyText: {
+    color: Colors.dark.icon,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

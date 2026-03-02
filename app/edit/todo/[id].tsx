@@ -1,9 +1,13 @@
+import { CustomAlert as Alert } from '../../../components/CustomAlert';
 import { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import TodoList from '../../../components/TodoList';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { Colors, NOTE_ACCENT_COLORS } from '../../../constants/Colors';
+import { StatusBar } from 'expo-status-bar';
 
 export default function EditTodoScreen() {
   const router = useRouter();
@@ -13,62 +17,51 @@ export default function EditTodoScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [originalNote, setOriginalNote] = useState<Note | null>(null);
 
+  const btnScale = useSharedValue(1);
+  const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
+
+  const accentColor = NOTE_ACCENT_COLORS[1]; // emerald for todos
+
   useEffect(() => {
-    if (id) {
-      loadTodoData();
-    }
+    if (id) loadTodoData();
   }, [id]);
 
   const loadTodoData = async () => {
     try {
       const notes = await loadNotes();
       const todo = notes.find(n => n.id === id);
-      if (todo && 'tasks' in todo) {
+      if (todo && todo.tasks) {
         setTitle(todo.title);
-        setTasks(todo.tasks || []);
+        setTasks(todo.tasks);
         setOriginalNote(todo);
       } else {
         Alert.alert('Error', 'Todo not found');
         router.back();
       }
-    } catch (error) {
-      console.error('Error loading todo:', error);
+    } catch {
       Alert.alert('Error', 'Failed to load todo');
       router.back();
     }
   };
 
+  const canSave = title.trim().length > 0 && tasks.length > 0;
+
   const handleSave = async () => {
-    if (isSaving) return;
-
-    if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
-      return;
-    }
-
-    if (tasks.length === 0) {
-      Alert.alert('Error', 'Please add at least one task');
-      return;
-    }
-
+    if (isSaving || !canSave) return;
+    btnScale.value = withSpring(0.93);
+    setTimeout(() => { btnScale.value = withSpring(1); }, 150);
     setIsSaving(true);
-
     try {
-      const updatedTodo = {
+      const updatedTodo: Note = {
         ...originalNote!,
         title: title.trim(),
         tasks,
         lastModified: new Date().toISOString(),
       };
-
       const success = await updateNote(updatedTodo);
-      if (success) {
-        router.back();
-      } else {
-        Alert.alert('Error', 'Failed to update todo');
-      }
-    } catch (error) {
-      console.error('Error updating todo:', error);
+      if (success) router.back();
+      else Alert.alert('Error', 'Failed to update todo');
+    } catch {
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setIsSaving(false);
@@ -76,18 +69,14 @@ export default function EditTodoScreen() {
   };
 
   const handleCancel = () => {
-    if (
+    const hasChanges =
       title !== originalNote?.title ||
-      JSON.stringify(tasks) !== JSON.stringify(originalNote?.tasks)
-    ) {
-      Alert.alert(
-        'Discard Changes',
-        'Are you sure you want to discard your changes?',
-        [
-          { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
-        ]
-      );
+      JSON.stringify(tasks) !== JSON.stringify(originalNote?.tasks);
+    if (hasChanges) {
+      Alert.alert('Discard Changes', 'Are you sure?', [
+        { text: 'Keep Editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+      ]);
     } else {
       router.back();
     }
@@ -95,94 +84,72 @@ export default function EditTodoScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity 
-            onPress={handleCancel}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={24} color="#007AFF" />
-            <Text style={styles.cancelButton}>Back</Text>
-          </TouchableOpacity>
-        </View>
+      <StatusBar style="light" />
 
-        <View style={styles.headerRight}>
-          <TouchableOpacity 
+      <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleCancel} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={20} color={Colors.dark.icon} />
+          <Text style={styles.backText}>Cancel</Text>
+        </TouchableOpacity>
+
+        <Animated.View style={btnStyle}>
+          <TouchableOpacity
+            style={[styles.saveBtn, canSave && { backgroundColor: accentColor }, !canSave && { opacity: 0.4 }]}
             onPress={handleSave}
-            disabled={isSaving || !title.trim() || tasks.length === 0}
+            disabled={!canSave || isSaving}
+            activeOpacity={0.9}
           >
-            <Text style={[
-              styles.saveButton,
-              (isSaving || !title.trim() || tasks.length === 0) && styles.saveButtonDisabled
-            ]}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Text>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Text style={styles.saveBtnText}>{isSaving ? 'Saving…' : 'Save List'}</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
-      <TextInput
-        style={styles.titleInput}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Todo List Title"
-        placeholderTextColor="#666"
-        maxLength={100}
-      />
+      <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+        <TextInput
+          style={styles.titleInput}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="List title..."
+          placeholderTextColor={Colors.dark.icon}
+          maxLength={100}
+        />
+      </Animated.View>
 
-      <TodoList
-        tasks={tasks}
-        onTasksChange={setTasks}
-        editable={true}
-      />
+      <Animated.View entering={FadeInDown.delay(180).duration(500)} style={{ flex: 1 }}>
+        <TodoList tasks={tasks} onTasksChange={setTasks} />
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1c1c1e',
-  },
+  container: { flex: 1, backgroundColor: Colors.dark.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2e',
+    borderBottomColor: Colors.dark.border,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  backBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 6, paddingHorizontal: 4,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  backText: { color: Colors.dark.icon, fontSize: 16, fontWeight: '500' },
+  saveBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.dark.surfaceSolid,
+    paddingVertical: 10, paddingHorizontal: 18,
+    borderRadius: 22, borderWidth: 1, borderColor: Colors.dark.border,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    color: '#007AFF',
-    fontSize: 17,
-  },
-  saveButton: {
-    color: '#007AFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   titleInput: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#fff',
-    padding: 16,
-    paddingTop: 20,
+    fontSize: 28, fontWeight: '800', color: Colors.dark.text,
+    paddingHorizontal: 22, paddingTop: 22, paddingBottom: 8,
+    letterSpacing: -0.8,
   },
 });

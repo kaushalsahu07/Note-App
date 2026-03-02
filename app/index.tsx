@@ -1,5 +1,6 @@
+import { CustomAlert as Alert } from '../components/CustomAlert';
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, RefreshControl, Modal, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
@@ -8,8 +9,16 @@ import { loadNotes, Note, deleteNote, updateNote, setNotesChangeListener } from 
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, {
+  FadeInDown, FadeInUp, LinearTransition, ZoomIn,
+  useSharedValue, useAnimatedStyle, withSpring, withTiming,
+  interpolate, Extrapolation
+} from 'react-native-reanimated';
+import { Colors } from '../constants/Colors';
+import { StatusBar } from 'expo-status-bar';
 
 const USERNAME_KEY = 'user_name';
+const { width } = Dimensions.get('window');
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -21,152 +30,128 @@ export default function NotesScreen() {
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
-  
+
+  const fabScale = useSharedValue(1);
+  const fabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+  }));
+
   useEffect(() => {
     checkUsername();
     loadStoredNotes();
     setNotesChangeListener(setNotes);
   }, []);
-  
+
   const checkUsername = async () => {
     try {
-      const savedUsername = await AsyncStorage.getItem(USERNAME_KEY);
-      if (savedUsername) {
-        setUsername(savedUsername);
-      } else {
-        setShowUsernameModal(true);
-      }
-    } catch (error) {
-      console.error('Error checking username:', error);
-    }
+      const saved = await AsyncStorage.getItem(USERNAME_KEY);
+      if (saved) setUsername(saved);
+      else setShowUsernameModal(true);
+    } catch (e) { console.error(e); }
   };
-  
+
   const saveUsername = async () => {
-    if (!tempUsername.trim()) {
-      return;
-    }
+    if (!tempUsername.trim()) return;
     try {
       await AsyncStorage.setItem(USERNAME_KEY, tempUsername.trim());
       setUsername(tempUsername.trim());
       setShowUsernameModal(false);
-    } catch (error) {
-      console.error('Error saving username:', error);
-    }
+    } catch (e) { console.error(e); }
   };
-  
+
   const loadStoredNotes = async () => {
     setIsLoading(true);
     try {
       const storedNotes = await loadNotes();
       setNotes(storedNotes);
-    } catch (error) {
-      console.error('Error loading notes:', error);
+    } catch (e) {
       Alert.alert('Error', 'Failed to load notes');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      await loadStoredNotes();
-    } finally {
-      setRefreshing(false);
-    }
+    try { await loadStoredNotes(); }
+    finally { setRefreshing(false); }
   }, []);
-  
-  useEffect(() => {
-    loadStoredNotes();
-  }, []);
-  
+
   const handleTaskToggle = async (noteId: string, taskId: string) => {
-    const noteToUpdate = notes.find(note => note.id === noteId);
-    if (!noteToUpdate || !noteToUpdate.tasks) return;
-  
-    const updatedTasks = noteToUpdate.tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
+    const noteToUpdate = notes.find(n => n.id === noteId);
+    if (!noteToUpdate?.tasks) return;
+    const updatedTasks = noteToUpdate.tasks.map(t =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
     );
-  
-    const updatedNote = {
-      ...noteToUpdate,
-      tasks: updatedTasks,
-      lastModified: new Date().toISOString()
-    };
-  
+    const updatedNote = { ...noteToUpdate, tasks: updatedTasks, lastModified: new Date().toISOString() };
     const success = await updateNote(updatedNote);
-    if (success) {
-      setNotes(notes.map(note =>
-        note.id === noteId ? updatedNote : note
-      ));
-    }
+    if (success) setNotes(notes.map(n => n.id === noteId ? updatedNote : n));
   };
-  
+
   const handleDeleteNote = async (noteId: string) => {
-    Alert.alert(
-      'Delete Note',
-      'Are you sure you want to delete this note?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await deleteNote(noteId);
-            if (success) {
-              loadStoredNotes();
-            } else {
-              Alert.alert('Error', 'Failed to delete note');
-            }
-          },
-        },
-      ]
-    );
+    const success = await deleteNote(noteId);
+    if (success) loadStoredNotes();
+    else Alert.alert('Error', 'Failed to delete note');
   };
-  
+
   const filteredNotes = notes.filter(note => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      note.title.toLowerCase().includes(searchLower) ||
-      note.content.toLowerCase().includes(searchLower)
-    );
+    const q = searchQuery.toLowerCase();
+    return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
   });
-  
-  const handleChangeUsername = () => {
-    setTempUsername(username);
-    setShowUsernameModal(true);
+
+  const handleFabPressIn = () => { fabScale.value = withSpring(0.88); };
+  const handleFabPressOut = () => { fabScale.value = withSpring(1); };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   };
-  
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.greetingContainer}>
-          <View style={styles.greetingTextContainer}>
-            <Text style={styles.greetingHey}>Hey,</Text>
-            <TouchableOpacity onPress={handleChangeUsername} activeOpacity={0.7}>
-              <Text style={styles.greetingName}>{username}</Text>
+      <StatusBar style="light" />
+
+      {/* Header */}
+      <Animated.View entering={FadeInDown.duration(700)} style={styles.header}>
+        <View style={styles.greetingRow}>
+          <View>
+            <Text style={styles.greetingLabel}>{getGreeting()} 👋</Text>
+            <TouchableOpacity onPress={() => { setTempUsername(username); setShowUsernameModal(true); }} activeOpacity={0.7}>
+              <Text style={styles.greetingName}>{username || 'Friend'}</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={styles.settingsButton} 
-            onPress={() => setShowSettings(true)}
-          >
-            <Ionicons name="settings-outline" size={22} color="#007AFF" />
+          <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(true)} activeOpacity={0.85}>
+            <Ionicons name="settings-outline" size={22} color={Colors.dark.icon} />
           </TouchableOpacity>
         </View>
-      </View>
-  
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search notes..."
-      />
-  
-      <FlatList
+
+        {/* Stats pill */}
+        <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.statsPill}>
+          <Ionicons name="document-text" size={14} color={Colors.dark.accent} />
+          <Text style={styles.statsText}>{notes.length} note{notes.length !== 1 ? 's' : ''}</Text>
+          <View style={styles.statsDot} />
+          <Ionicons name="checkmark-circle" size={14} color={Colors.dark.accentSecondary} />
+          <Text style={styles.statsText}>
+            {notes.filter(n => n.tasks).length} list{notes.filter(n => n.tasks).length !== 1 ? 's' : ''}
+          </Text>
+        </Animated.View>
+      </Animated.View>
+
+      {/* Search */}
+      <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+      </Animated.View>
+
+      {/* Notes Grid */}
+      <Animated.FlatList
+        itemLayoutAnimation={LinearTransition}
         data={filteredNotes}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <NoteCard
             note={item}
+            index={index}
             onDelete={() => handleDeleteNote(item.id)}
             onPress={() => router.push(item.tasks ? `/edit/todo/${item.id}` : `/note/${item.id}`)}
             onTaskToggle={handleTaskToggle}
@@ -179,83 +164,84 @@ export default function NotesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#fff"
-            colors={["#007AFF"]}
+            tintColor={Colors.dark.accent}
+            colors={[Colors.dark.accent]}
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              {searchQuery ? 'No matching notes' : 'No notes yet'}
+          <Animated.View entering={FadeInUp.delay(300).duration(600)} style={styles.emptyState}>
+            <View style={styles.emptyIconWrapper}>
+              <Ionicons name={searchQuery ? 'search-outline' : 'journal-outline'} size={48} color={Colors.dark.accent} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {searchQuery ? 'Nothing found' : 'Your canvas awaits'}
             </Text>
-            <Text style={styles.emptyStateSubtext}>
-              {searchQuery ? 'Try a different search' : 'Tap + to create one'}
+            <Text style={styles.emptySubtitle}>
+              {searchQuery ? 'Try a different search term' : 'Tap + to create your first note'}
             </Text>
-          </View>
+          </Animated.View>
         }
       />
-  
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/select-type')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-  
-      <Modal
-        visible={showUsernameModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          if (username) setShowUsernameModal(false);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {username ? 'Change Username' : 'Welcome!'}
-            </Text>
-            <Text style={styles.modalSubtitle}>
-              {username ? 'Enter new username' : "What's your name?"}
-            </Text>
+
+      {/* FAB */}
+      <Animated.View entering={ZoomIn.delay(400)} style={styles.fabWrapper}>
+        <Animated.View style={fabAnimStyle}>
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => router.push('/select-type')}
+            onPressIn={handleFabPressIn}
+            onPressOut={handleFabPressOut}
+            activeOpacity={1}
+          >
+            <View style={styles.fabInner}>
+              <Ionicons name="add" size={30} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+
+      {/* Username Modal */}
+      <Modal visible={showUsernameModal} transparent animationType="fade"
+        onRequestClose={() => { if (username) setShowUsernameModal(false); }}>
+        <View style={styles.overlay}>
+          <Animated.View entering={ZoomIn.duration(400)} style={styles.modal}>
+            <View style={styles.modalIconRow}>
+              <View style={styles.modalIconBg}>
+                <Ionicons name="person" size={28} color={Colors.dark.accent} />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>{username ? 'Change Name' : 'Welcome! 🎉'}</Text>
+            <Text style={styles.modalSub}>{username ? 'Enter your new name' : "What should we call you?"}</Text>
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               value={tempUsername}
               onChangeText={setTempUsername}
-              placeholder="Enter your name"
-              placeholderTextColor="#666"
+              placeholder="Your name..."
+              placeholderTextColor={Colors.dark.icon}
               autoFocus
               onSubmitEditing={saveUsername}
             />
-            <View style={styles.modalButtons}>
+            <View style={styles.modalBtns}>
               {username && (
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowUsernameModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowUsernameModal(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.saveButton, !tempUsername.trim() && styles.saveButtonDisabled]}
+                style={[styles.confirmBtn, !tempUsername.trim() && { opacity: 0.4 }]}
                 onPress={saveUsername}
                 disabled={!tempUsername.trim()}
               >
-                <Text style={styles.saveButtonText}>
-                  {username ? 'Save Changes' : 'Continue'}
-                </Text>
+                <Text style={styles.confirmBtnText}>{username ? 'Save' : 'Let\'s go →'}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
+      {/* Settings Modal */}
       {showSettings && (
-        <Modal
-          visible={showSettings}
-          animationType="slide"
-          presentationStyle="pageSheet"
-        >
+        <Modal visible={showSettings} animationType="slide" presentationStyle="pageSheet">
           <Settings onClose={() => setShowSettings(false)} />
         </Modal>
       )}
@@ -266,149 +252,223 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 22,
+    paddingTop: 64,
+    paddingBottom: 8,
   },
-  greetingContainer: {
+  greetingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  greetingTextContainer: {
-    gap: 4,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  greetingHey: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#fff',
-    opacity: 0.9,
+  greetingLabel: {
+    fontSize: 15,
+    color: Colors.dark.icon,
+    fontWeight: '500',
+    marginBottom: 2,
+    letterSpacing: 0.3,
   },
   greetingName: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: -0.5,
+    fontSize: 36,
+    fontWeight: '800',
+    color: Colors.dark.text,
+    letterSpacing: -1.2,
+  },
+  settingsBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  statsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    backgroundColor: Colors.dark.glassLight,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  statsText: {
+    fontSize: 13,
+    color: Colors.dark.icon,
+    fontWeight: '500',
+  },
+  statsDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.dark.border,
+    marginHorizontal: 2,
   },
   notesList: {
-    padding: 8,
-    paddingBottom: 100,
+    paddingHorizontal: 10,
+    paddingBottom: 120,
+    paddingTop: 6,
+  },
+  fabWrapper: {
+    position: 'absolute',
+    bottom: 36,
+    right: 24,
+    zIndex: 99,
   },
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  fabInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.dark.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  fabText: {
-    fontSize: 32,
-    color: '#fff',
-    fontWeight: '300',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   emptyState: {
-    flex: 1,
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIconWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: Colors.dark.glassLight,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    marginBottom: 20,
   },
-  emptyStateText: {
-    fontSize: 20,
-    color: '#666',
-    marginTop: 16,
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.dark.text,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
-  emptyStateSubtext: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
+  emptySubtitle: {
+    fontSize: 15,
+    color: Colors.dark.icon,
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  modalOverlay: {
+
+  // Modal
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(8, 12, 20, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#1c1c1e',
-    borderRadius: 16,
     padding: 24,
-    width: '85%',
+  },
+  modal: {
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 28,
+    padding: 28,
+    width: '100%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    alignItems: 'center',
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.2,
+    shadowRadius: 32,
+    elevation: 20,
+  },
+  modalIconRow: {
+    marginBottom: 16,
+  },
+  modalIconBg: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: Colors.dark.glassLight,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.dark.text,
+    letterSpacing: -0.8,
+    marginBottom: 6,
   },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#666',
+  modalSub: {
+    fontSize: 15,
+    color: Colors.dark.icon,
     marginBottom: 24,
+    textAlign: 'center',
   },
-  input: {
+  modalInput: {
     width: '100%',
-    backgroundColor: '#2c2c2e',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.background,
+    borderRadius: 16,
     padding: 16,
-    fontSize: 16,
-    color: '#fff',
-    marginBottom: 16,
+    fontSize: 17,
+    color: Colors.dark.text,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.border,
+    fontWeight: '500',
   },
-  modalButtons: {
+  modalBtns: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    width: '100%',
   },
-  cancelButton: {
+  cancelBtn: {
     flex: 1,
-    backgroundColor: '#2c2c2e',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.background,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
-  cancelButtonText: {
-    color: '#fff',
+  cancelBtnText: {
+    color: Colors.dark.icon,
     fontSize: 16,
     fontWeight: '600',
   },
-  saveButton: {
+  confirmBtn: {
     flex: 1,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.accent,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
+  confirmBtnText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

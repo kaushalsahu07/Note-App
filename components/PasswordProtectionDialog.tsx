@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { Colors } from '../constants/Colors';
 
 interface PasswordProtectionDialogProps {
   visible: boolean;
@@ -7,129 +10,212 @@ interface PasswordProtectionDialogProps {
   onSetPassword: (password: string) => void;
 }
 
-export default function PasswordProtectionDialog({ 
-  visible, 
-  onClose, 
-  onSetPassword 
+export default function PasswordProtectionDialog({
+  visible, onClose, onSetPassword,
 }: PasswordProtectionDialogProps) {
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
-  const handleSetPassword = () => {
+  const handleSet = () => {
     if (password.length < 4) {
-      setError('Password must be at least 4 characters long');
+      setError('Password must be at least 4 characters');
       return;
     }
-    
-    if (password !== confirmPassword) {
+    if (password !== confirm) {
       setError('Passwords do not match');
       return;
     }
-
     onSetPassword(password);
     setPassword('');
-    setConfirmPassword('');
+    setConfirm('');
+    setError('');
+    onClose();
+  };
+
+  const handleClose = () => {
+    setPassword('');
+    setConfirm('');
     setError('');
     onClose();
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-        <View style={styles.dialog}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <View style={styles.overlay}>
+        <Animated.View entering={ZoomIn.duration(350)} style={styles.dialog}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="shield-checkmark" size={28} color={Colors.dark.accentTertiary} />
+          </View>
+
           <Text style={styles.title}>Set Password</Text>
-          
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter password"
-            placeholderTextColor="#666"
-            secureTextEntry
-          />
-          
-          <TextInput
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm password"
-            placeholderTextColor="#666"
-            secureTextEntry
-          />
-          
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          
-          <View style={styles.buttons}>
-            <TouchableOpacity onPress={onClose} style={styles.button}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSetPassword} style={[styles.button, styles.primaryButton]}>
-              <Text style={styles.primaryButtonText}>Set Password</Text>
+          <Text style={styles.subtitle}>Protect this note with a password</Text>
+
+          {/* Password input */}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={t => { setPassword(t); setError(''); }}
+              placeholder="Enter password"
+              placeholderTextColor={Colors.dark.icon}
+              secureTextEntry={!showPw}
+            />
+            <TouchableOpacity onPress={() => setShowPw(!showPw)} style={styles.eyeBtn}>
+              <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={Colors.dark.icon} />
             </TouchableOpacity>
           </View>
-        </View>
+
+          {/* Confirm input */}
+          <View style={[styles.inputRow, { marginBottom: 0 }]}>
+            <TextInput
+              style={styles.input}
+              value={confirm}
+              onChangeText={t => { setConfirm(t); setError(''); }}
+              placeholder="Confirm password"
+              placeholderTextColor={Colors.dark.icon}
+              secureTextEntry={!showPw}
+              onSubmitEditing={handleSet}
+              returnKeyType="done"
+            />
+          </View>
+
+          {!!error && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={13} color={Colors.dark.danger} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <View style={styles.btnRow}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmBtn, (!password.trim() || !confirm.trim()) && { opacity: 0.4 }]}
+              onPress={handleSet}
+              disabled={!password.trim() || !confirm.trim()}
+            >
+              <Ionicons name="shield-checkmark-outline" size={15} color="#fff" />
+              <Text style={styles.confirmBtnText}>Set Password</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(8, 12, 20, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 28,
   },
   dialog: {
-    backgroundColor: '#1c1c1e',
-    borderRadius: 12,
-    padding: 20,
-    width: '80%',
+    backgroundColor: Colors.dark.surfaceSolid,
+    borderRadius: 28,
+    padding: 28,
+    width: '100%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    alignItems: 'center',
+    shadowColor: Colors.dark.accentTertiary,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.2,
+    shadowRadius: 32,
+    elevation: 20,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.dark.glassLight,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  input: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    color: '#fff',
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.dark.text,
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
-  error: {
-    color: '#ff3b30',
-    marginBottom: 12,
+  subtitle: {
+    fontSize: 14,
+    color: Colors.dark.icon,
+    marginBottom: 22,
+    textAlign: 'center',
   },
-  buttons: {
+  inputRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: Colors.dark.background,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.border,
+    paddingHorizontal: 14,
+    marginBottom: 12,
   },
-  button: {
-    padding: 8,
-  },
-  buttonText: {
-    color: '#007AFF',
+  input: {
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 16,
+    color: Colors.dark.text,
+    fontWeight: '500',
   },
-  primaryButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  eyeBtn: { padding: 6 },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  errorText: {
+    color: Colors.dark.danger,
+    fontSize: 13,
+    fontWeight: '500',
   },
-}); 
+  btnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    marginTop: 18,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: Colors.dark.background,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  cancelBtnText: { color: Colors.dark.icon, fontSize: 15, fontWeight: '600' },
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.dark.accentTertiary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    shadowColor: Colors.dark.accentTertiary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+});

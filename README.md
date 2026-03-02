@@ -1,70 +1,103 @@
-# Note App 📝
+# Note-App
 
-A simple and intuitive note-taking application built with React Native and Expo, fully developed with the assistance of AI (Claude 3.5 Haiku/Sonnet).
+A modern, dark-themed notes & to-do app built with **Expo** (React Native) and **Expo Router**.
 
-## Features
-* Create new notes with title content and selected colors
-* Backup and Restore the Notes, Todo lists & Passwords
-* Search through notes
-* Create a ToDo list 
-* Local storage for data persistence
-* Share Notes
-* Save password
-* Secure password with biometric lock
+---
 
-## Installation
+## Tech Stack
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/kaushalsahu07/note-app.git
-   ```
+| Layer | Technology |
+|---|---|
+| Framework | [Expo](https://expo.dev) (SDK 51+) |
+| Navigation | [Expo Router](https://expo.github.io/router/) (file-based) |
+| Animations | [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/) |
+| Icons | [@expo/vector-icons](https://icons.expo.fyi/) (Ionicons) |
+| Storage | AsyncStorage via `utils/storage.ts` |
+| Language | TypeScript |
 
-2. Navigate to project directory
-   ```bash
-   cd note-app
-   ``` 
+---
 
-3. Install dependencies
-   ```bash
-   npm install
-   ```
+## Project Structure
 
-4. Start the development server
-   ```bash
-   npx expo start
-   ```
+```
+Note-App/
+├── app/                        # All screens (Expo Router file-based routing)
+│   ├── _layout.tsx             # Root Stack navigator — registers every screen
+│   ├── index.tsx               # Home screen: notes grid + search + FAB
+│   ├── select-type.tsx         # Modal: choose Note or To-Do before creating
+│   ├── new.tsx                 # Modal: create a new text Note
+│   ├── new-todo.tsx            # Modal: create a new To-Do list
+│   ├── note/
+│   │   └── [id].tsx            # View/edit a text Note (supports password lock)
+│   └── edit/
+│       └── todo/
+│           └── [id].tsx        # Edit an existing To-Do list
+│
+├── components/                 # Reusable UI components
+│   ├── NoteCard.tsx            # Card shown in the notes grid (note + todo variants)
+│   ├── TodoList.tsx            # Interactive task-list editor (used in new-todo & edit)
+│   ├── SearchBar.tsx           # Animated search input
+│   ├── Settings.tsx            # Settings sheet (backup, restore, export, password mgr)
+│   ├── PasswordManager.tsx     # Full password-manager feature inside Settings
+│   ├── AccessPasswordDialog.tsx  # Dialog: enter password to unlock a protected note
+│   └── PasswordProtectionDialog.tsx  # Dialog: set/remove password on a note
+│
+├── constants/
+│   └── Colors.ts               # Design tokens: dark palette, note color arrays
+│
+├── utils/
+│   ├── storage.ts              # AsyncStorage CRUD for notes (Note & TodoItem types)
+│   ├── backupRestore.ts        # Export / import notes as JSON file
+│   ├── exportNotes.ts          # Export individual notes as plain text
+│   └── passwordUtils.ts        # Simple password hash helper
+│
+├── assets/                     # Static assets (app icon etc.)
+├── app.json                    # Expo app config
+├── tsconfig.json
+└── package.json
+```
 
-5. Run on your preferred platform:
-   - Press `a` for Android
-   - Press `i` for iOS
-   - Scan QR code with Expo Go App 
-   
-## Technologies
-- React Native + Expo
-- Cursor Ai Code Editor 
-- Claude 3.7 Sonnet
+---
 
-## Contributing
-1. Fork the repository
-2. Create a new branch
-   ```bash
-   git checkout -b feature/YourFeature
-   ```
-3. Commit your changes
-   ```bash
-   git commit -m 'Add YourFeature'
-   ```
-4. Push to the branch
-   ```bash
-   git push origin feature/YourFeature
-   ```
-5. Open a Pull Request
+## Screen Flow
 
-## Contact
+```
+index (Home)
+  └─► select-type  (modal – pick type)
+        ├─► new          (modal – write a note)
+        └─► new-todo     (modal – build a task list)
 
-For any inquiries, reach out at [kaushalsahu.me@gmail.com].<br>
-GitHub: [@kaushalsahu07](https://github.com/kaushalsahu07).<br>
-Linkedin: [@kaushalsahu07](www.linkedin.com/in/kaushalsahu07).<br>
-Instagram: [@cd.kaushal](https://www.instagram.com/cd.kaushal?igsh=cTVram1ia3Vvamxz).<br>
-Portfolio: [Website Link ](https://kaushalsahu07.github.io/portfolio/).<br>
-X (Tweeter): [@kaushalsahu_07](https://x.com/kaushalsahu_07?t=7nk-jApWrJkgW6YwklJZWQ&s=09).<br>
+index
+  └─► note/[id]          (modal – view/edit note, password protected)
+  └─► edit/todo/[id]     (modal – edit task list)
+```
+
+---
+
+## Getting Started
+
+```bash
+npm install
+npx expo start --clear
+```
+
+Scan the QR code with **Expo Go** on your device, or press `a` for Android emulator / `i` for iOS simulator.
+
+---
+
+## Design System
+
+All colors live in `constants/Colors.ts`.  
+Key tokens:
+
+| Token | Purpose |
+|---|---|
+| `Colors.dark.background` | Main screen background |
+| `Colors.dark.surfaceSolid` | Cards, modals, bottom bars |
+| `Colors.dark.accent` | Primary brand color (indigo) |
+| `Colors.dark.accentSecondary` | Secondary accent (emerald, for todos) |
+| `Colors.dark.text` | Primary text |
+| `Colors.dark.icon` | Muted / secondary text |
+| `Colors.dark.border` | Subtle dividers |
+| `NOTE_COLORS[]` | Background tints for note cards |
+| `NOTE_ACCENT_COLORS[]` | Vivid accent colors matching each card |

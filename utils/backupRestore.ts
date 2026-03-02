@@ -1,7 +1,8 @@
+import { CustomAlert as Alert } from '../components/CustomAlert';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
-import { Alert } from 'react-native';
+
 import * as DocumentPicker from 'expo-document-picker';
 
 const NOTES_KEY = '@notes_v1';

@@ -1,7 +1,15 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { CustomAlert as Alert } from './CustomAlert';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Note } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  FadeInDown, Layout,
+  useAnimatedStyle, useSharedValue,
+  withSpring, withTiming, interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { Colors, NOTE_COLORS, NOTE_BORDER_COLORS, NOTE_ACCENT_COLORS } from '../constants/Colors';
 
 interface NoteCardProps {
   note: Note;
@@ -10,221 +18,427 @@ interface NoteCardProps {
   isSelected?: boolean;
   isSelectionMode?: boolean;
   onTaskToggle?: (noteId: string, taskId: string) => void;
+  index?: number;
 }
 
-export default function NoteCard({ 
-  note, 
-  onDelete, 
-  onPress, 
-  isSelected = false,
-  isSelectionMode = false,
-  onTaskToggle
+export default function NoteCard({
+  note, onDelete, onPress,
+  isSelected = false, isSelectionMode = false,
+  onTaskToggle, index = 0,
 }: NoteCardProps) {
-  const router = useRouter();
+  // ─── Animation values ──────────────────────────────────────
+  const scale = useSharedValue(1);
+  const glow = useSharedValue(0);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    shadowOpacity: interpolate(glow.value, [0, 1], [0.08, 0.45], Extrapolation.CLAMP),
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withTiming(0.94, { duration: 150 });
+    glow.value = withTiming(1, { duration: 150 });
+  };
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 200 });
+    glow.value = withTiming(0, { duration: 300 });
+  };
+
+  const handleDeletePrompt = () => {
+    Alert.alert(
+      note.tasks ? 'Delete List' : 'Delete Note',
+      `Delete "${note.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: onDelete },
+      ],
+    );
+  };
+
+  // ─── Colors ────────────────────────────────────────────────
+  const colorIndex = index % NOTE_COLORS.length;
+  const cardBg = NOTE_COLORS[colorIndex];
+  const cardBorder = NOTE_BORDER_COLORS[colorIndex];
+  const accent = NOTE_ACCENT_COLORS[colorIndex];
+
+  // ─── Task stats ────────────────────────────────────────────
+  const totalCount = note.tasks?.length ?? 0;
+  const completedCount = note.tasks?.filter((t: any) => t.completed).length ?? 0;
+  const progressPct = totalCount > 0 ? completedCount / totalCount : 0;
+  const allDone = totalCount > 0 && completedCount === totalCount;
+
+  // ─── Word / char count for notes ───────────────────────────
+  const wordCount = note.content
+    ? note.content.trim().split(/\s+/).filter(Boolean).length
+    : 0;
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card, 
-        { backgroundColor: note.color },
-        isSelected && styles.selectedCard
-      ]}
-      onPress={onPress}
+    <Animated.View
+      entering={FadeInDown.delay(index * 70).duration(480)}
+      style={styles.wrapper}
     >
-      {isSelectionMode && (
-        <View style={styles.checkboxContainer}>
-          <View style={[
-            styles.checkbox,
-            isSelected && styles.checkboxSelected
-          ]}>
-            {isSelected && (
-              <Ionicons name="checkmark" size={18} color="#fff" />
+      {/* Scale + glow layer — separate from layout animation */}
+      <Animated.View style={[cardAnimStyle, { borderRadius: 20, flex: 1 }]}>
+        <Pressable
+          style={[
+            styles.card,
+            { borderColor: isSelected ? accent : cardBorder, shadowColor: accent },
+            isSelected && styles.selectedCard,
+          ]}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onLongPress={handleDeletePrompt}
+          delayLongPress={500}
+        >
+          {/* Solid dark base + translucent color tint overlay */}
+          <View style={[styles.colorOverlay, { backgroundColor: cardBg }]} />
+
+          {/* ── Top accent stripe ─────────────────────────────── */}
+          <View style={[styles.topStripe, { backgroundColor: accent }]} />
+
+          {/* ── Header row: icon badge + optional delete ──────── */}
+          <View style={styles.headerRow}>
+            <View style={[styles.typePill, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
+              <Ionicons
+                name={note.tasks ? 'checkbox' : 'document-text'}
+                size={11}
+                color={accent}
+              />
+              <Text style={[styles.typePillText, { color: accent }]}>
+                {note.tasks ? 'List' : 'Note'}
+              </Text>
+            </View>
+
+            {/* Delete icon (always visible, small) */}
+            {!isSelectionMode && (
+              <TouchableOpacity
+                style={[styles.deleteBtn, { borderColor: `${accent}30` }]}
+                onPress={(e) => { e.stopPropagation(); handleDeletePrompt(); }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-outline" size={13} color={Colors.dark.danger} />
+              </TouchableOpacity>
+            )}
+
+            {/* Selection checkbox */}
+            {isSelectionMode && (
+              <View style={[styles.checkbox, isSelected && { backgroundColor: accent, borderColor: accent }]}>
+                {isSelected && <Ionicons name="checkmark" size={12} color="#fff" />}
+              </View>
             )}
           </View>
-        </View>
-      )}
-      <View style={styles.contentContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {note.title}
-        </Text>
-        {note.tasks ? (
-          <View style={styles.tasksContainer}>
-            {note.tasks.slice(0, 3).map((task, index) => (
-              <View key={task.id} style={styles.taskItem}>
+
+          {/* ── Title ─────────────────────────────────────────── */}
+          <Text style={styles.title} numberOfLines={2}>{note.title}</Text>
+
+          {/* ── Body: note content OR task list ───────────────── */}
+          {note.tasks ? (
+            <View style={styles.tasksWrap}>
+              {note.tasks.slice(0, 4).map((task) => (
                 <TouchableOpacity
-                  style={[styles.taskCheckbox, task.completed && styles.taskCheckboxCompleted]}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onTaskToggle?.(note.id, task.id);
-                  }}
+                  key={task.id}
+                  style={styles.taskRow}
+                  onPress={(e) => { e.stopPropagation(); onTaskToggle?.(note.id, task.id); }}
+                  activeOpacity={0.7}
                 >
-                  {task.completed && <Ionicons name="checkmark" size={12} color="#fff" />}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onTaskToggle?.(note.id, task.id);
-                  }}
-                  style={styles.taskTextContainer}
-                >
-                  <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]} numberOfLines={1}>
+                  {/* Custom checkbox */}
+                  <View style={[
+                    styles.taskCheck,
+                    { borderColor: task.completed ? accent : `${accent}60` },
+                    task.completed && { backgroundColor: accent },
+                  ]}>
+                    {task.completed && <Ionicons name="checkmark" size={9} color="#fff" />}
+                  </View>
+                  <Text
+                    style={[styles.taskText, task.completed && { color: Colors.dark.icon, textDecorationLine: 'line-through' }]}
+                    numberOfLines={1}
+                  >
                     {task.text}
                   </Text>
                 </TouchableOpacity>
+              ))}
+
+              {totalCount > 4 && (
+                <Text style={[styles.moreText, { color: accent }]}>
+                  +{totalCount - 4} more
+                </Text>
+              )}
+
+              {/* Progress bar */}
+              {totalCount > 0 && (
+                <View style={styles.progressWrap}>
+                  <View style={styles.progressBg}>
+                    <Animated.View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${progressPct * 100}%` as any,
+                          backgroundColor: allDone ? '#34D399' : accent,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.progressLabel, { color: allDone ? '#34D399' : accent }]}>
+                    {completedCount}/{totalCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.body} numberOfLines={5}>{note.content}</Text>
+          )}
+
+          {/* ── Footer ────────────────────────────────────────── */}
+          <View style={styles.footer}>
+            <View style={styles.footerLeft}>
+              <Ionicons name="calendar-outline" size={10} color={Colors.dark.icon} />
+              <Text style={styles.dateText}>{note.date}</Text>
+            </View>
+
+            {/* Word count badge for text notes */}
+            {!note.tasks && wordCount > 0 && (
+              <View style={[styles.wordBadge, { backgroundColor: `${accent}18` }]}>
+                <Text style={[styles.wordBadgeText, { color: accent }]}>
+                  {wordCount}w
+                </Text>
               </View>
-            ))}
-            {note.tasks.length > 3 && (
-              <Text style={styles.moreTasksText}>{note.tasks.length - 3} more tasks...</Text>
+            )}
+
+            {/* Done badge for completed lists */}
+            {allDone && (
+              <View style={[styles.doneBadge]}>
+                <Ionicons name="checkmark-circle" size={11} color="#34D399" />
+                <Text style={styles.doneBadgeText}>Done</Text>
+              </View>
             )}
           </View>
-        ) : (
-          <Text style={styles.content} numberOfLines={3}>
-            {note.content}
-          </Text>
-        )}
-        <Text style={styles.date}>{note.date}</Text>
-      </View>
-      {!isSelectionMode && (
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+        </Pressable>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    margin: 6,
+  },
+
+  // Separate layer for scale/shadow animation — no layout animation here
+  scaleLayer: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+
   card: {
     flex: 1,
-    margin: 8,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#2c2c2e',
-    minHeight: 150,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  selectedCard: {
-    borderWidth: 3,
-    borderColor: '#007AFF',
-    shadowColor: '#007AFF',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    borderRadius: 20,
+    minHeight: 180,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
     elevation: 8,
+    padding: 14,
+    paddingTop: 18,
+    backgroundColor: '#0F172A',   // solid dark base always
   },
-  checkboxContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    zIndex: 1,
+
+  colorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+
+  selectedCard: {
     borderWidth: 2,
-    borderColor: '#007AFF',
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  checkboxSelected: {
-    backgroundColor: '#007AFF',
-  },
-  contentContainer: {
-    flex: 1,
-    position: 'relative',
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  content: {
-    fontSize: 15,
-    color: '#333',
-    marginBottom: 8,
-  },
-  date: {
-    fontSize: 12,
-    color: '#666',
+
+  // ─── Top stripe ──────────────────────────────────────────────
+  topStripe: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
+    left: 0,
     right: 0,
-    padding: 0,
+    height: 3.5,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
-  tasksContainer: {
-    marginBottom: 15,
+
+  // ─── Header ─────────────────────────────────────────────────
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  moreTasksText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 8,
-  },
-  tasksList: {
-    marginBottom: 8,
-  },
-  taskItem: {
+
+  typePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
   },
-  taskCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#333',
-    marginRight: 8,
+  typePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+
+  deleteBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  taskCheckboxCompleted: {
-    backgroundColor: '#333',
-    borderColor: '#333',
+
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: Colors.dark.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  taskText: {
+
+  // ─── Title ──────────────────────────────────────────────────
+  title: {
     fontSize: 15,
-    color: '#333',
+    fontWeight: '800',
+    color: Colors.dark.text,
+    marginBottom: 9,
+    letterSpacing: -0.4,
+    lineHeight: 21,
+  },
+
+  // ─── Note body ──────────────────────────────────────────────
+  body: {
+    fontSize: 12.5,
+    color: Colors.dark.icon,
+    lineHeight: 19,
     flex: 1,
   },
-  taskTextCompleted: {
-    textDecorationLine: 'line-through',
-    opacity: 0.6,
+
+  // ─── Task list ──────────────────────────────────────────────
+  tasksWrap: {
+    flex: 1,
+    gap: 6,
   },
-  tasksRemainingText: {
+
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  taskCheck: {
+    width: 15,
+    height: 15,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+
+  taskText: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  taskTextContainer: {
+    color: Colors.dark.text,
     flex: 1,
-    paddingVertical: 4, // Added for better touch target
+    fontWeight: '500',
+    lineHeight: 17,
+  },
+
+  moreText: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 1,
+    letterSpacing: 0.2,
+  },
+
+  // ─── Progress ───────────────────────────────────────────────
+  progressWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+
+  progressBg: {
+    flex: 1,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: 4,
+    borderRadius: 3,
+  },
+
+  progressLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    minWidth: 24,
+    textAlign: 'right',
+  },
+
+  // ─── Footer ─────────────────────────────────────────────────
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  dateText: {
+    fontSize: 10,
+    color: Colors.dark.icon,
+    fontWeight: '500',
+    opacity: 0.75,
+  },
+
+  wordBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+
+  wordBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  doneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  doneBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#34D399',
+    letterSpacing: 0.3,
   },
 });

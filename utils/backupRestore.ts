@@ -1,8 +1,7 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
-
 import * as DocumentPicker from 'expo-document-picker';
 
 const NOTES_KEY = '@notes_v1';
@@ -18,28 +17,25 @@ interface BackupData {
 
 export async function createBackup() {
   try {
-    // Fetch all data from AsyncStorage
     const [notesJson, passwordsJson] = await Promise.all([
       AsyncStorage.getItem(NOTES_KEY),
-      AsyncStorage.getItem(PASSWORDS_KEY)
+      AsyncStorage.getItem(PASSWORDS_KEY),
     ]);
 
     const backupData: BackupData = {
       notes: notesJson ? JSON.parse(notesJson) : [],
       passwords: passwordsJson ? JSON.parse(passwordsJson) : [],
       timestamp: new Date().toISOString(),
-      version: '1.0'
+      version: '1.0',
     };
 
-    const backupString = JSON.stringify(backupData, null, 2);
-    const fileUri = `${FileSystem.documentDirectory}${BACKUP_FILENAME}`;
+    const file = new File(Paths.document, BACKUP_FILENAME);
+    file.write(JSON.stringify(backupData, null, 2));
 
-    await FileSystem.writeAsStringAsync(fileUri, backupString);
-    
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
-        dialogTitle: 'Save your backup file'
+        dialogTitle: 'Save your backup file',
       });
       return true;
     } else {
@@ -56,26 +52,24 @@ export async function createBackup() {
 export async function restoreFromBackup() {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/json'
+      type: 'application/json',
     });
 
-    if (result.canceled) {
-      return false;
-    }
+    if (result.canceled) return false;
 
-    const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
+    const fileContent = await new File(result.assets[0].uri).text();
     const backupData: BackupData = JSON.parse(fileContent);
 
-    // Validate backup data structure
-    if (!backupData.version || !backupData.timestamp || 
-        !Array.isArray(backupData.notes) || !Array.isArray(backupData.passwords)) {
+    if (
+      !backupData.version || !backupData.timestamp ||
+      !Array.isArray(backupData.notes) || !Array.isArray(backupData.passwords)
+    ) {
       throw new Error('Invalid backup file format');
     }
 
-    // Restore data to AsyncStorage
     await Promise.all([
       AsyncStorage.setItem(NOTES_KEY, JSON.stringify(backupData.notes)),
-      AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(backupData.passwords))
+      AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(backupData.passwords)),
     ]);
 
     Alert.alert('Success', 'Backup restored successfully');

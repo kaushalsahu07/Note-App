@@ -43,11 +43,9 @@ export default function Settings({ onClose }: { onClose: () => void }) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleBackup = async () => {
-    try {
-      await createBackup();
+    const success = await createBackup();
+    if (success) {
       Alert.alert('Backup Created', 'Your data has been backed up successfully.');
-    } catch {
-      Alert.alert('Error', 'Failed to create backup');
     }
   };
 
@@ -57,12 +55,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       {
         text: 'Restore', style: 'destructive',
         onPress: async () => {
-          try {
-            await restoreFromBackup();
-            Alert.alert('Restored!', 'Data restored successfully.');
-          } catch {
-            Alert.alert('Error', 'Failed to restore data');
-          }
+          await restoreFromBackup();
         }
       }
     ]);

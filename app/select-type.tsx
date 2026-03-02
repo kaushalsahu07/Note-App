@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import Animated, {
     useSharedValue, useAnimatedStyle, withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 type OptionConfig = {
@@ -40,6 +41,8 @@ const OPTIONS: OptionConfig[] = [
 function OptionItem({ option, delay, onPress }: { option: OptionConfig; delay: number; onPress: () => void }) {
     const scale = useSharedValue(1);
     const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+    const { colors } = useTheme();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     return (
         <Animated.View
@@ -79,16 +82,18 @@ function OptionItem({ option, delay, onPress }: { option: OptionConfig; delay: n
 
 export default function SelectTypeScreen() {
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar style={isDark ? 'light' : 'dark'} />
 
             {/* Header */}
             <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                 <Animated.View style={styles.headerGlow} />
                 <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} activeOpacity={0.85}>
-                    <Ionicons name="close" size={20} color={Colors.dark.icon} />
+                    <Ionicons name="close" size={20} color={colors.icon} />
                 </TouchableOpacity>
             </Animated.View>
 
@@ -116,10 +121,13 @@ export default function SelectTypeScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.dark.background,
+        backgroundColor: colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -136,16 +144,16 @@ const styles = StyleSheet.create({
         width: 200,
         height: 200,
         borderRadius: 100,
-        backgroundColor: Colors.dark.accent,
+        backgroundColor: colors.accent,
         opacity: 0.07,
     },
     closeBtn: {
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         borderWidth: 1,
-        borderColor: Colors.dark.border,
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -157,14 +165,14 @@ const styles = StyleSheet.create({
     titleLabel: {
         fontSize: 14,
         fontWeight: '700',
-        color: Colors.dark.accent,
+        color: colors.accent,
         letterSpacing: 0.5,
         marginBottom: 10,
     },
     titleMain: {
         fontSize: 40,
         fontWeight: '800',
-        color: Colors.dark.text,
+        color: colors.text,
         letterSpacing: -1.5,
         lineHeight: 48,
     },
@@ -179,7 +187,7 @@ const styles = StyleSheet.create({
     optionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         borderRadius: 24,
         padding: 18,
         borderWidth: 1.5,
@@ -188,7 +196,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.2,
         shadowRadius: 16,
-        elevation: 8,
         overflow: 'hidden',
     },
     accentLine: {
@@ -212,13 +219,13 @@ const styles = StyleSheet.create({
     optionLabel: {
         fontSize: 20,
         fontWeight: '700',
-        color: Colors.dark.text,
+        color: colors.text,
         marginBottom: 4,
         letterSpacing: -0.5,
     },
     optionDesc: {
         fontSize: 13,
-        color: Colors.dark.icon,
+        color: colors.icon,
         lineHeight: 19,
     },
     arrowWrap: {
@@ -234,8 +241,9 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         width: 280,
         height: 100,
-        backgroundColor: Colors.dark.accentSecondary,
-        opacity: 0.06,
+        backgroundColor: colors.accentSecondary,
+        opacity: 0.07,
         borderRadius: 100,
     },
-});
+  });
+}

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, interpolateColor,
 } from 'react-native-reanimated';
@@ -14,16 +15,21 @@ interface SearchBarProps {
 
 export default function SearchBar({ value, onChangeText, placeholder = 'Search notes...' }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  // 0 = blurred, 1 = focused — drives ALL animated values so the worklet
-  // never needs to read JS-side state (which would crash on the UI thread).
+  // Capture theme colors as plain strings for use in animated worklet closures
+  const borderBase = colors.border;
+  const borderFocused = colors.accent + 'AA';
+
+  // 0 = blurred, 1 = focused
   const focusAnim = useSharedValue(0);
 
   const containerAnimStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(
       focusAnim.value,
       [0, 1],
-      [Colors.dark.border, Colors.dark.accent + 'AA'], // softer — semi-transparent accent
+      [borderBase, borderFocused],
     ),
     shadowOpacity: withTiming(focusAnim.value * 0.12, { duration: 250 }),
   }));
@@ -48,7 +54,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search n
         <Ionicons
           name="search"
           size={18}
-          color={isFocused ? Colors.dark.accent : Colors.dark.icon}
+          color={isFocused ? colors.accent : colors.icon}
           style={styles.icon}
         />
       </Animated.View>
@@ -58,7 +64,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search n
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={Colors.dark.icon}
+        placeholderTextColor={colors.icon}
         onFocus={handleFocus}
         onBlur={handleBlur}
         returnKeyType="search"
@@ -69,7 +75,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search n
         <Ionicons
           name="close-circle"
           size={18}
-          color={Colors.dark.icon}
+          color={colors.icon}
           onPress={() => onChangeText('')}
           style={styles.clearIcon}
         />
@@ -78,18 +84,21 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search n
   );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     marginHorizontal: 16,
     marginVertical: 10,
     paddingHorizontal: 16,
     paddingVertical: 13,
     borderRadius: 18,
     borderWidth: 1.5,
-    shadowColor: Colors.dark.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 4,
@@ -103,10 +112,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: Colors.dark.text,
+    color: colors.text,
     fontSize: 16,
     fontWeight: '500',
-    // No fixed height — let the text render at its natural line height
-    paddingVertical: 0, // prevents extra vertical padding on Android
+    paddingVertical: 0,
   },
-});
+  });
+}

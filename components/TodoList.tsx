@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TodoItem } from '../utils/storage';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 interface TodoListProps {
   tasks: TodoItem[];
@@ -13,6 +14,8 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
   const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const addTask = () => {
     if (!newTaskText.trim()) return;
@@ -79,7 +82,7 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
         style={styles.deleteBtn}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="close-circle" size={18} color={Colors.dark.danger} />
+        <Ionicons name="close-circle" size={18} color={colors.danger} />
       </TouchableOpacity>
     </View>
   );
@@ -93,7 +96,7 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
           value={newTaskText}
           onChangeText={setNewTaskText}
           placeholder="Add a new task..."
-          placeholderTextColor={Colors.dark.icon}
+          placeholderTextColor={colors.icon}
           onSubmitEditing={addTask}
           returnKeyType="done"
         />
@@ -115,7 +118,7 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <Ionicons name="list-outline" size={32} color={Colors.dark.icon} />
+            <Ionicons name="list-outline" size={32} color={colors.icon} />
             <Text style={styles.emptyText}>No tasks yet — add one above</Text>
           </View>
         }
@@ -124,10 +127,13 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
   );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
   },
 
   // ─── Input row ───────────────────────────────────────────────
@@ -137,24 +143,24 @@ const styles = StyleSheet.create({
     gap: 10,
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: Colors.dark.text,
+    color: colors.text,
     fontWeight: '500',
   },
   addBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.dark.accent,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -170,13 +176,13 @@ const styles = StyleSheet.create({
   taskItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     marginBottom: 10,
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     gap: 12,
   },
   checkbox: {
@@ -184,34 +190,35 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 7,
     borderWidth: 1.5,
-    borderColor: Colors.dark.accent,
+    borderColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
   checkboxChecked: {
-    backgroundColor: Colors.dark.accent,
-    borderColor: Colors.dark.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   taskTextWrap: { flex: 1 },
   taskText: {
     flex: 1,
     fontSize: 15,
-    color: Colors.dark.text,
+    color: colors.text,
     fontWeight: '500',
   },
   taskCompleted: {
     textDecorationLine: 'line-through',
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontWeight: '400',
   },
   editInput: {
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
+    color: colors.text,
   },
   deleteBtn: { padding: 2 },
 
@@ -222,8 +229,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyText: {
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontSize: 14,
     fontWeight: '500',
   },
-});
+  });
+}

@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { saveNote, TodoItem } from '../utils/storage';
@@ -7,13 +7,16 @@ import { Ionicons } from '@expo/vector-icons';
 import TodoList from '../components/TodoList';
 import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, NOTE_COLORS, NOTE_ACCENT_COLORS } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function NewTodoScreen() {
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const [title, setTitle] = useState('');
     const [tasks, setTasks] = useState<TodoItem[]>([]);
-    const [selectedColorIndex, setSelectedColorIndex] = useState(1); // Default emerald for todos
+    const [selectedColorIndex, setSelectedColorIndex] = useState(1);
     const [isSaving, setIsSaving] = useState(false);
 
     const saveBtnScale = useSharedValue(1);
@@ -62,12 +65,12 @@ export default function NewTodoScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar style={isDark ? 'light' : 'dark'} />
 
             {/* Header */}
             <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.dark.icon} />
+                    <Ionicons name="chevron-back" size={20} color={colors.icon} />
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
 
@@ -90,7 +93,7 @@ export default function NewTodoScreen() {
                     value={title}
                     onChangeText={setTitle}
                     placeholder="List title..."
-                    placeholderTextColor={Colors.dark.icon}
+                    placeholderTextColor={colors.icon}
                     maxLength={100}
                 />
             </Animated.View>
@@ -119,8 +122,11 @@ export default function NewTodoScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.dark.background },
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -129,32 +135,32 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.dark.border,
+        borderBottomColor: colors.border,
     },
     backBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
         paddingVertical: 6, paddingHorizontal: 4,
     },
-    backText: { color: Colors.dark.icon, fontSize: 16, fontWeight: '500' },
+    backText: { color: colors.icon, fontSize: 16, fontWeight: '500' },
     saveBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 6,
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         paddingVertical: 10, paddingHorizontal: 18,
-        borderRadius: 22, borderWidth: 1, borderColor: Colors.dark.border,
+        borderRadius: 22, borderWidth: 1, borderColor: colors.border,
     },
     saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
     titleInput: {
-        fontSize: 28, fontWeight: '800', color: Colors.dark.text,
+        fontSize: 28, fontWeight: '800', color: colors.text,
         paddingHorizontal: 22, paddingTop: 22, paddingBottom: 8,
         letterSpacing: -0.8,
     },
     colorBar: {
-        backgroundColor: Colors.dark.surfaceSolid,
-        borderTopWidth: 1, borderTopColor: Colors.dark.border,
+        backgroundColor: colors.surfaceSolid,
+        borderTopWidth: 1, borderTopColor: colors.border,
         paddingHorizontal: 22, paddingVertical: 16, paddingBottom: 34,
         flexDirection: 'row', alignItems: 'center', gap: 16,
     },
-    colorLabel: { fontSize: 13, color: Colors.dark.icon, fontWeight: '600', letterSpacing: 0.3 },
+    colorLabel: { fontSize: 13, color: colors.icon, fontWeight: '600', letterSpacing: 0.3 },
     colorRow: { flexDirection: 'row', gap: 10, flex: 1 },
     colorSwatch: {
         width: 32, height: 32, borderRadius: 16,
@@ -164,4 +170,5 @@ const styles = StyleSheet.create({
         shadowColor: '#fff', shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4, shadowRadius: 6, elevation: 6,
     },
-});
+  });
+}

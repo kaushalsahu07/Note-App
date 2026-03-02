@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from '../../components/CustomAlert';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note } from '../../utils/storage';
@@ -8,11 +8,14 @@ import { exportNotesToFile } from '../../utils/exportNotes';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function NoteViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -109,15 +112,15 @@ export default function NoteViewScreen() {
   if (isLocked) {
     return (
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.lockedScreen}>
           <View style={styles.lockIcon}>
-            <Ionicons name="lock-closed" size={40} color={Colors.dark.accent} />
+            <Ionicons name="lock-closed" size={40} color={colors.accent} />
           </View>
           <Text style={styles.lockedTitle}>Protected Note</Text>
           <Text style={styles.lockedSub}>Enter password to unlock</Text>
           <TouchableOpacity style={styles.backFromLock} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={18} color={Colors.dark.icon} />
+            <Ionicons name="arrow-back" size={18} color={colors.icon} />
             <Text style={styles.backFromLockText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -132,18 +135,18 @@ export default function NoteViewScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.8}>
-          <Ionicons name="chevron-back" size={20} color={Colors.dark.icon} />
+          <Ionicons name="chevron-back" size={20} color={colors.icon} />
           <Text style={styles.backText}>Notes</Text>
         </TouchableOpacity>
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtn} onPress={handleExport} activeOpacity={0.8}>
-            <Ionicons name="share-outline" size={20} color={Colors.dark.icon} />
+            <Ionicons name="share-outline" size={20} color={colors.icon} />
           </TouchableOpacity>
 
           {isEditing ? (
@@ -160,7 +163,7 @@ export default function NoteViewScreen() {
             </Animated.View>
           ) : (
             <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(true)} activeOpacity={0.8}>
-              <Ionicons name="pencil" size={16} color={Colors.dark.accent} />
+              <Ionicons name="pencil" size={16} color={colors.accent} />
               <Text style={styles.editBtnText}>Edit</Text>
             </TouchableOpacity>
           )}
@@ -174,7 +177,7 @@ export default function NoteViewScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="Title..."
-            placeholderTextColor={Colors.dark.icon}
+            placeholderTextColor={colors.icon}
             maxLength={100}
             editable={isEditing}
             onFocus={() => setIsEditing(true)}
@@ -183,12 +186,12 @@ export default function NoteViewScreen() {
 
         {/* Metadata row */}
         <Animated.View entering={FadeInDown.delay(160).duration(500)} style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={13} color={Colors.dark.icon} />
+          <Ionicons name="calendar-outline" size={13} color={colors.icon} />
           <Text style={styles.metaText}>{originalNote?.date || ''}</Text>
           {originalNote?.lastModified && (
             <>
               <View style={styles.metaDot} />
-              <Ionicons name="time-outline" size={13} color={Colors.dark.icon} />
+              <Ionicons name="time-outline" size={13} color={colors.icon} />
               <Text style={styles.metaText}>
                 {new Date(originalNote.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
@@ -204,7 +207,7 @@ export default function NoteViewScreen() {
             value={content}
             onChangeText={setContent}
             placeholder="Your note content..."
-            placeholderTextColor={Colors.dark.icon}
+            placeholderTextColor={colors.icon}
             multiline
             textAlignVertical="top"
             editable={isEditing}
@@ -216,8 +219,11 @@ export default function NoteViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.dark.background },
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -226,40 +232,40 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
+    borderBottomColor: colors.border,
   },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingVertical: 6, paddingHorizontal: 4,
   },
-  backText: { color: Colors.dark.icon, fontSize: 16, fontWeight: '500' },
+  backText: { color: colors.icon, fontSize: 16, fontWeight: '500' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: Colors.dark.surfaceSolid,
-    borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 9, paddingHorizontal: 16,
     borderRadius: 20,
-    shadowColor: Colors.dark.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.dark.glassLight,
+    backgroundColor: colors.glassLight,
     paddingVertical: 9, paddingHorizontal: 16,
-    borderRadius: 20, borderWidth: 1, borderColor: Colors.dark.border,
+    borderRadius: 20, borderWidth: 1, borderColor: colors.border,
   },
-  editBtnText: { color: Colors.dark.accent, fontSize: 14, fontWeight: '600' },
+  editBtnText: { color: colors.accent, fontSize: 14, fontWeight: '600' },
   scroll: { flex: 1 },
   titleInput: {
-    fontSize: 30, fontWeight: '800', color: Colors.dark.text,
+    fontSize: 30, fontWeight: '800', color: colors.text,
     paddingHorizontal: 22, paddingTop: 24, paddingBottom: 8,
     letterSpacing: -0.8,
   },
@@ -267,17 +273,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 22, paddingBottom: 16,
   },
-  metaText: { fontSize: 12, color: Colors.dark.icon, fontWeight: '500' },
+  metaText: { fontSize: 12, color: colors.icon, fontWeight: '500' },
   metaDot: {
     width: 3, height: 3, borderRadius: 2,
-    backgroundColor: Colors.dark.icon, opacity: 0.4, marginHorizontal: 2,
+    backgroundColor: colors.icon, opacity: 0.4, marginHorizontal: 2,
   },
   divider: {
-    height: 1, backgroundColor: Colors.dark.border,
+    height: 1, backgroundColor: colors.border,
     marginHorizontal: 22, marginBottom: 20,
   },
   contentInput: {
-    fontSize: 17, color: Colors.dark.text,
+    fontSize: 17, color: colors.text,
     paddingHorizontal: 22, paddingBottom: 80,
     lineHeight: 28, minHeight: 300, fontWeight: '400',
   },
@@ -288,17 +294,18 @@ const styles = StyleSheet.create({
   },
   lockIcon: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: Colors.dark.glassLight,
-    borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.glassLight,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
-  lockedTitle: { fontSize: 24, fontWeight: '700', color: Colors.dark.text, letterSpacing: -0.5 },
-  lockedSub: { fontSize: 15, color: Colors.dark.icon, textAlign: 'center' },
+  lockedTitle: { fontSize: 24, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
+  lockedSub: { fontSize: 15, color: colors.icon, textAlign: 'center' },
   backFromLock: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginTop: 24, paddingVertical: 12, paddingHorizontal: 24,
-    backgroundColor: Colors.dark.surfaceSolid,
-    borderRadius: 20, borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.surfaceSolid,
+    borderRadius: 20, borderWidth: 1, borderColor: colors.border,
   },
-  backFromLockText: { color: Colors.dark.icon, fontSize: 15, fontWeight: '600' },
-});
+  backFromLockText: { color: colors.icon, fontSize: 15, fontWeight: '600' },
+  });
+}

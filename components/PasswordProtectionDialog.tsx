@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 interface PasswordProtectionDialogProps {
   visible: boolean;
@@ -17,6 +18,8 @@ export default function PasswordProtectionDialog({
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleSet = () => {
     if (password.length < 4) {
@@ -46,7 +49,7 @@ export default function PasswordProtectionDialog({
       <View style={styles.overlay}>
         <Animated.View entering={ZoomIn.duration(350)} style={styles.dialog}>
           <View style={styles.iconWrap}>
-            <Ionicons name="shield-checkmark" size={28} color={Colors.dark.accentTertiary} />
+            <Ionicons name="shield-checkmark" size={28} color={colors.accentTertiary} />
           </View>
 
           <Text style={styles.title}>Set Password</Text>
@@ -59,11 +62,11 @@ export default function PasswordProtectionDialog({
               value={password}
               onChangeText={t => { setPassword(t); setError(''); }}
               placeholder="Enter password"
-              placeholderTextColor={Colors.dark.icon}
+              placeholderTextColor={colors.icon}
               secureTextEntry={!showPw}
             />
             <TouchableOpacity onPress={() => setShowPw(!showPw)} style={styles.eyeBtn}>
-              <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={Colors.dark.icon} />
+              <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.icon} />
             </TouchableOpacity>
           </View>
 
@@ -74,7 +77,7 @@ export default function PasswordProtectionDialog({
               value={confirm}
               onChangeText={t => { setConfirm(t); setError(''); }}
               placeholder="Confirm password"
-              placeholderTextColor={Colors.dark.icon}
+              placeholderTextColor={colors.icon}
               secureTextEntry={!showPw}
               onSubmitEditing={handleSet}
               returnKeyType="done"
@@ -83,7 +86,7 @@ export default function PasswordProtectionDialog({
 
           {!!error && (
             <View style={styles.errorRow}>
-              <Ionicons name="alert-circle" size={13} color={Colors.dark.danger} />
+              <Ionicons name="alert-circle" size={13} color={colors.danger} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
@@ -107,7 +110,10 @@ export default function PasswordProtectionDialog({
   );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(8, 12, 20, 0.88)',
@@ -116,15 +122,15 @@ const styles = StyleSheet.create({
     padding: 28,
   },
   dialog: {
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 28,
     padding: 28,
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     alignItems: 'center',
-    shadowColor: Colors.dark.accentTertiary,
+    shadowColor: colors.accentTertiary,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.2,
     shadowRadius: 32,
@@ -134,9 +140,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.dark.glassLight,
+    backgroundColor: colors.glassLight,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -144,13 +150,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: Colors.dark.text,
+    color: colors.text,
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.dark.icon,
+    color: colors.icon,
     marginBottom: 22,
     textAlign: 'center',
   },
@@ -158,10 +164,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     paddingHorizontal: 14,
     marginBottom: 12,
   },
@@ -169,7 +175,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: Colors.dark.text,
+    color: colors.text,
     fontWeight: '500',
   },
   eyeBtn: { padding: 6 },
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   errorText: {
-    color: Colors.dark.danger,
+    color: colors.danger,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -194,28 +200,29 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
   },
-  cancelBtnText: { color: Colors.dark.icon, fontSize: 15, fontWeight: '600' },
+  cancelBtnText: { color: colors.icon, fontSize: 15, fontWeight: '600' },
   confirmBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.dark.accentTertiary,
+    backgroundColor: colors.accentTertiary,
     borderRadius: 14,
     paddingVertical: 14,
-    shadowColor: Colors.dark.accentTertiary,
+    shadowColor: colors.accentTertiary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
   },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-});
+  });
+}

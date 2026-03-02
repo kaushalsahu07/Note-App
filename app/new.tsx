@@ -1,15 +1,18 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { saveNote } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, NOTE_COLORS, NOTE_ACCENT_COLORS } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function NewNoteScreen() {
     const router = useRouter();
+    const { colors, isDark } = useTheme();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [selectedColorIndex, setSelectedColorIndex] = useState(0);
@@ -59,12 +62,12 @@ export default function NewNoteScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar style={isDark ? 'light' : 'dark'} />
 
             {/* Header */}
             <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.8}>
-                    <Ionicons name="chevron-back" size={20} color={Colors.dark.icon} />
+                    <Ionicons name="chevron-back" size={20} color={colors.icon} />
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
 
@@ -88,7 +91,7 @@ export default function NewNoteScreen() {
                         value={title}
                         onChangeText={setTitle}
                         placeholder="Note title..."
-                        placeholderTextColor={Colors.dark.icon}
+                        placeholderTextColor={colors.icon}
                         maxLength={100}
                     />
                 </Animated.View>
@@ -99,7 +102,7 @@ export default function NewNoteScreen() {
                         value={content}
                         onChangeText={setContent}
                         placeholder="Start writing..."
-                        placeholderTextColor={Colors.dark.icon}
+                        placeholderTextColor={colors.icon}
                         multiline
                         textAlignVertical="top"
                     />
@@ -132,10 +135,13 @@ export default function NewNoteScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.dark.background,
+        backgroundColor: colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -145,7 +151,7 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.dark.border,
+        borderBottomColor: colors.border,
     },
     backBtn: {
         flexDirection: 'row',
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     backText: {
-        color: Colors.dark.icon,
+        color: colors.icon,
         fontSize: 16,
         fontWeight: '500',
     },
@@ -163,12 +169,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         paddingVertical: 10,
         paddingHorizontal: 18,
         borderRadius: 22,
         borderWidth: 1,
-        borderColor: Colors.dark.border,
+        borderColor: colors.border,
     },
     saveBtnText: {
         color: '#fff',
@@ -181,7 +187,7 @@ const styles = StyleSheet.create({
     titleInput: {
         fontSize: 28,
         fontWeight: '800',
-        color: Colors.dark.text,
+        color: colors.text,
         paddingHorizontal: 22,
         paddingTop: 24,
         paddingBottom: 8,
@@ -189,7 +195,7 @@ const styles = StyleSheet.create({
     },
     contentInput: {
         fontSize: 17,
-        color: Colors.dark.text,
+        color: colors.text,
         paddingHorizontal: 22,
         paddingTop: 12,
         paddingBottom: 120,
@@ -202,9 +208,9 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         borderTopWidth: 1,
-        borderTopColor: Colors.dark.border,
+        borderTopColor: colors.border,
         paddingHorizontal: 22,
         paddingVertical: 16,
         paddingBottom: 34,
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
     },
     colorLabel: {
         fontSize: 13,
-        color: Colors.dark.icon,
+        color: colors.icon,
         fontWeight: '600',
         letterSpacing: 0.3,
     },
@@ -237,4 +243,5 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 6,
     },
-});
+  });
+}

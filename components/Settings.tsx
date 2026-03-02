@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from './CustomAlert';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -7,6 +7,7 @@ import { createBackup, restoreFromBackup } from '../utils/backupRestore';
 import PasswordManager from './PasswordManager';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 interface SettingRowProps {
@@ -16,9 +17,11 @@ interface SettingRowProps {
   description?: string;
   onPress: () => void;
   index: number;
+  colors: typeof Colors.dark;
 }
 
-function SettingRow({ icon, iconColor, label, description, onPress, index }: SettingRowProps) {
+function SettingRow({ icon, iconColor, label, description, onPress, index, colors }: SettingRowProps) {
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
       <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.75}>
@@ -29,13 +32,16 @@ function SettingRow({ icon, iconColor, label, description, onPress, index }: Set
           <Text style={styles.rowLabel}>{label}</Text>
           {description && <Text style={styles.rowDesc}>{description}</Text>}
         </View>
-        <Ionicons name="chevron-forward" size={18} color={Colors.dark.icon} style={{ opacity: 0.5 }} />
+        <Ionicons name="chevron-forward" size={18} color={colors.icon} style={{ opacity: 0.5 }} />
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
 export default function Settings({ onClose }: { onClose: () => void }) {
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const handleBackup = async () => {
     try {
       await createBackup();
@@ -64,7 +70,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Handle bar */}
       <View style={styles.handleBar} />
@@ -73,11 +79,30 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
         <Text style={styles.title}>Settings</Text>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
-          <Ionicons name="close" size={20} color={Colors.dark.icon} />
+          <Ionicons name="close" size={20} color={colors.icon} />
         </TouchableOpacity>
       </Animated.View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+        {/* Appearance section */}
+        <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+          <Text style={styles.sectionLabel}>🎨  Appearance</Text>
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.card}>
+          <TouchableOpacity style={styles.themeRow} onPress={toggleTheme} activeOpacity={0.8}>
+            <View style={[styles.rowIcon, { backgroundColor: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.12)' }]}>
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={isDark ? '#FBBF24' : colors.accent} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
+              <Text style={styles.rowDesc}>Tap to switch to {isDark ? 'light' : 'dark'} mode</Text>
+            </View>
+            <View style={[styles.themeToggle, isDark && styles.themeToggleDark]}>
+              <View style={[styles.themeToggleKnob, isDark && styles.themeToggleKnobDark]} />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Security section */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -94,20 +119,22 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         <View style={styles.card}>
           <SettingRow
             icon="cloud-upload-outline"
-            iconColor={Colors.dark.accent}
+            iconColor={colors.accent}
             label="Create Backup"
             description="Export your notes to a file"
             onPress={handleBackup}
             index={2}
+            colors={colors}
           />
           <View style={styles.separator} />
           <SettingRow
             icon="cloud-download-outline"
-            iconColor={Colors.dark.accentSecondary}
+            iconColor={colors.accentSecondary}
             label="Restore Data"
             description="Import notes from a backup file"
             onPress={handleRestore}
             index={3}
+            colors={colors}
           />
         </View>
 
@@ -117,7 +144,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(260).duration(400)} style={styles.aboutCard}>
           <View style={styles.appIconWrap}>
-            <Ionicons name="journal" size={36} color={Colors.dark.accent} />
+            <Ionicons name="journal" size={36} color={colors.accent} />
           </View>
           <View>
             <Text style={styles.appName}>Note App</Text>
@@ -130,11 +157,14 @@ export default function Settings({ onClose }: { onClose: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.dark.background },
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   handleBar: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: Colors.dark.border,
+    backgroundColor: colors.border,
     alignSelf: 'center',
     marginTop: 12, marginBottom: 8,
   },
@@ -146,34 +176,40 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 24, fontWeight: '800',
-    color: Colors.dark.text, letterSpacing: -0.6,
+    color: colors.text, letterSpacing: -0.6,
   },
   closeBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: Colors.dark.surfaceSolid,
-    borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
   scroll: { padding: 20, paddingBottom: 60 },
   sectionLabel: {
     fontSize: 13, fontWeight: '700',
-    color: Colors.dark.icon,
+    color: colors.icon,
     letterSpacing: 0.5,
     marginTop: 24, marginBottom: 10,
     textTransform: 'uppercase',
   },
   card: {
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 14,
+  },
+  themeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -184,23 +220,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   rowContent: { flex: 1 },
-  rowLabel: { fontSize: 16, fontWeight: '600', color: Colors.dark.text, letterSpacing: -0.2 },
-  rowDesc: { fontSize: 13, color: Colors.dark.icon, marginTop: 2 },
+  rowLabel: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
+  rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2 },
   separator: {
-    height: 1, backgroundColor: Colors.dark.border,
+    height: 1, backgroundColor: colors.border,
     marginLeft: 72,
   },
+  themeToggle: {
+    width: 50, height: 28, borderRadius: 14,
+    backgroundColor: colors.glassLight,
+    borderWidth: 1, borderColor: colors.border,
+    padding: 3, justifyContent: 'center',
+  },
+  themeToggleDark: {
+    backgroundColor: '#818CF8',
+    borderColor: '#818CF8',
+  },
+  themeToggleKnob: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: colors.icon,
+    alignSelf: 'flex-start',
+  },
+  themeToggleKnobDark: {
+    backgroundColor: '#fff',
+    alignSelf: 'flex-end',
+  },
   aboutCard: {
-    backgroundColor: Colors.dark.surfaceSolid,
-    borderRadius: 20, borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.surfaceSolid,
+    borderRadius: 20, borderWidth: 1, borderColor: colors.border,
     padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16,
   },
   appIconWrap: {
     width: 64, height: 64, borderRadius: 20,
-    backgroundColor: Colors.dark.glassLight,
-    borderWidth: 1, borderColor: Colors.dark.border,
+    backgroundColor: colors.glassLight,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  appName: { fontSize: 18, fontWeight: '700', color: Colors.dark.text, letterSpacing: -0.3 },
-  appVersion: { fontSize: 13, color: Colors.dark.icon, marginTop: 3 },
-});
+  appName: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
+  appVersion: { fontSize: 13, color: colors.icon, marginTop: 3 },
+  });
+}

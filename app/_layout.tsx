@@ -1,18 +1,21 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Colors } from '../constants/Colors';
 import { CustomAlertProvider } from '../components/CustomAlert';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
-export default function Layout() {
+function AppStack() {
+  const { colors, isDark } = useTheme();
+
   return (
-    <CustomAlertProvider>
-      <StatusBar style="light" />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: Colors.dark.background,
+            backgroundColor: colors.background,
           },
         }}
       >
@@ -47,6 +50,16 @@ export default function Layout() {
           options={{ presentation: 'modal' }}
         />
       </Stack>
-    </CustomAlertProvider>
+    </View>
+  );
+}
+
+export default function Layout() {
+  return (
+    <ThemeProvider>
+      <CustomAlertProvider>
+        <AppStack />
+      </CustomAlertProvider>
+    </ThemeProvider>
   );
 }

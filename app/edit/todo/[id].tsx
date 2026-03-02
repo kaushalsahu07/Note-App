@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from '../../../components/CustomAlert';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
@@ -7,11 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import TodoList from '../../../components/TodoList';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, NOTE_ACCENT_COLORS } from '../../../constants/Colors';
+import { useTheme } from '../../../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function EditTodoScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [tasks, setTasks] = useState<TodoItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,11 +87,11 @@ export default function EditTodoScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={handleCancel} activeOpacity={0.8}>
-          <Ionicons name="chevron-back" size={20} color={Colors.dark.icon} />
+          <Ionicons name="chevron-back" size={20} color={colors.icon} />
           <Text style={styles.backText}>Cancel</Text>
         </TouchableOpacity>
 
@@ -111,7 +114,7 @@ export default function EditTodoScreen() {
           value={title}
           onChangeText={setTitle}
           placeholder="List title..."
-          placeholderTextColor={Colors.dark.icon}
+          placeholderTextColor={colors.icon}
           maxLength={100}
         />
       </Animated.View>
@@ -123,8 +126,11 @@ export default function EditTodoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.dark.background },
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -133,23 +139,24 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
+    borderBottomColor: colors.border,
   },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingVertical: 6, paddingHorizontal: 4,
   },
-  backText: { color: Colors.dark.icon, fontSize: 16, fontWeight: '500' },
+  backText: { color: colors.icon, fontSize: 16, fontWeight: '500' },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     paddingVertical: 10, paddingHorizontal: 18,
-    borderRadius: 22, borderWidth: 1, borderColor: Colors.dark.border,
+    borderRadius: 22, borderWidth: 1, borderColor: colors.border,
   },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   titleInput: {
-    fontSize: 28, fontWeight: '800', color: Colors.dark.text,
+    fontSize: 28, fontWeight: '800', color: colors.text,
     paddingHorizontal: 22, paddingTop: 22, paddingBottom: 8,
     letterSpacing: -0.8,
   },
-});
+  });
+}

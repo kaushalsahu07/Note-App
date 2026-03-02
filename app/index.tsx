@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
@@ -14,6 +14,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
   interpolate, Extrapolation
 } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 
@@ -22,6 +23,8 @@ const { width } = Dimensions.get('window');
 
 export default function NotesScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -111,7 +114,7 @@ export default function NotesScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(700)} style={styles.header}>
@@ -123,16 +126,16 @@ export default function NotesScreen() {
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(true)} activeOpacity={0.85}>
-            <Ionicons name="settings-outline" size={22} color={Colors.dark.icon} />
+            <Ionicons name="settings-outline" size={22} color={colors.icon} />
           </TouchableOpacity>
         </View>
 
         {/* Stats pill */}
         <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.statsPill}>
-          <Ionicons name="document-text" size={14} color={Colors.dark.accent} />
-          <Text style={styles.statsText}>{notes.length} note{notes.length !== 1 ? 's' : ''}</Text>
+          <Ionicons name="document-text" size={14} color={colors.accent} />
+          <Text style={styles.statsText}>{notes.filter(n => !n.tasks).length} note{notes.filter(n => !n.tasks).length !== 1 ? 's' : ''}</Text>
           <View style={styles.statsDot} />
-          <Ionicons name="checkmark-circle" size={14} color={Colors.dark.accentSecondary} />
+          <Ionicons name="checkmark-circle" size={14} color={colors.accentSecondary} />
           <Text style={styles.statsText}>
             {notes.filter(n => n.tasks).length} list{notes.filter(n => n.tasks).length !== 1 ? 's' : ''}
           </Text>
@@ -164,14 +167,14 @@ export default function NotesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.dark.accent}
-            colors={[Colors.dark.accent]}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
         ListEmptyComponent={
           <Animated.View entering={FadeInUp.delay(300).duration(600)} style={styles.emptyState}>
             <View style={styles.emptyIconWrapper}>
-              <Ionicons name={searchQuery ? 'search-outline' : 'journal-outline'} size={48} color={Colors.dark.accent} />
+              <Ionicons name={searchQuery ? 'search-outline' : 'journal-outline'} size={48} color={colors.accent} />
             </View>
             <Text style={styles.emptyTitle}>
               {searchQuery ? 'Nothing found' : 'Your canvas awaits'}
@@ -207,7 +210,7 @@ export default function NotesScreen() {
           <Animated.View entering={ZoomIn.duration(400)} style={styles.modal}>
             <View style={styles.modalIconRow}>
               <View style={styles.modalIconBg}>
-                <Ionicons name="person" size={28} color={Colors.dark.accent} />
+                <Ionicons name="person" size={28} color={colors.accent} />
               </View>
             </View>
             <Text style={styles.modalTitle}>{username ? 'Change Name' : 'Welcome! 🎉'}</Text>
@@ -217,7 +220,7 @@ export default function NotesScreen() {
               value={tempUsername}
               onChangeText={setTempUsername}
               placeholder="Your name..."
-              placeholderTextColor={Colors.dark.icon}
+              placeholderTextColor={colors.icon}
               autoFocus
               onSubmitEditing={saveUsername}
             />
@@ -249,10 +252,13 @@ export default function NotesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 22,
@@ -266,7 +272,7 @@ const styles = StyleSheet.create({
   },
   greetingLabel: {
     fontSize: 15,
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontWeight: '500',
     marginBottom: 2,
     letterSpacing: 0.3,
@@ -274,16 +280,16 @@ const styles = StyleSheet.create({
   greetingName: {
     fontSize: 36,
     fontWeight: '800',
-    color: Colors.dark.text,
+    color: colors.text,
     letterSpacing: -1.2,
   },
   settingsBtn: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 4,
@@ -293,24 +299,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 12,
-    backgroundColor: Colors.dark.glassLight,
+    backgroundColor: colors.glassLight,
     alignSelf: 'flex-start',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
   },
   statsText: {
     fontSize: 13,
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontWeight: '500',
   },
   statsDot: {
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: Colors.dark.border,
+    backgroundColor: colors.border,
     marginHorizontal: 2,
   },
   notesList: {
@@ -328,7 +334,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    shadowColor: Colors.dark.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.55,
     shadowRadius: 16,
@@ -338,7 +344,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.dark.accent,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -353,9 +359,9 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: Colors.dark.glassLight,
+    backgroundColor: colors.glassLight,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -363,13 +369,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.dark.text,
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   emptySubtitle: {
     fontSize: 15,
-    color: Colors.dark.icon,
+    color: colors.icon,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -383,15 +389,15 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modal: {
-    backgroundColor: Colors.dark.surfaceSolid,
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 28,
     padding: 28,
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     alignItems: 'center',
-    shadowColor: Colors.dark.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.2,
     shadowRadius: 32,
@@ -404,35 +410,35 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: Colors.dark.glassLight,
+    backgroundColor: colors.glassLight,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalTitle: {
     fontSize: 26,
     fontWeight: '800',
-    color: Colors.dark.text,
+    color: colors.text,
     letterSpacing: -0.8,
     marginBottom: 6,
   },
   modalSub: {
     fontSize: 15,
-    color: Colors.dark.icon,
+    color: colors.icon,
     marginBottom: 24,
     textAlign: 'center',
   },
   modalInput: {
     width: '100%',
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 16,
     fontSize: 17,
-    color: Colors.dark.text,
+    color: colors.text,
     marginBottom: 20,
     borderWidth: 1.5,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     fontWeight: '500',
   },
   modalBtns: {
@@ -442,25 +448,25 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
   },
   cancelBtnText: {
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontSize: 16,
     fontWeight: '600',
   },
   confirmBtn: {
     flex: 1,
-    backgroundColor: Colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: Colors.dark.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -471,4 +477,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-});
+  });
+}

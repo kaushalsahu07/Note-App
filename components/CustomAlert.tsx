@@ -1,7 +1,8 @@
-import React, { useState, useImperativeHandle } from 'react';
+import React, { useState, useImperativeHandle, useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 type ButtonConfig = { text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' };
 type AlertConfig = { title: string; message?: string; buttons?: ButtonConfig[] };
@@ -15,6 +16,8 @@ export const globalAlertRef = React.createRef<CustomAlertRef>();
 
 export const CustomAlertProvider = ({ children }: { children: React.ReactNode }) => {
     const [config, setConfig] = useState<AlertConfig | null>(null);
+    const { colors } = useTheme();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     useImperativeHandle(globalAlertRef, () => ({
         alert: (title, message, buttons) => {
@@ -93,7 +96,10 @@ export const CustomAlert = {
     }
 };
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(8, 12, 20, 0.7)',
@@ -102,15 +108,15 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     alertBox: {
-        backgroundColor: Colors.dark.surfaceSolid,
+        backgroundColor: colors.surfaceSolid,
         borderRadius: 28,
         padding: 24,
         width: '100%',
         maxWidth: 360,
         borderWidth: 1,
-        borderColor: Colors.dark.border,
+        borderColor: colors.border,
         alignItems: 'center',
-        shadowColor: Colors.dark.accent,
+        shadowColor: colors.accent,
         shadowOffset: { width: 0, height: 16 },
         shadowOpacity: 0.15,
         shadowRadius: 32,
@@ -123,11 +129,11 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: Colors.dark.background,
+        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: Colors.dark.border,
+        borderColor: colors.border,
     },
     emoji: {
         fontSize: 28,
@@ -135,14 +141,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         fontWeight: '800',
-        color: Colors.dark.text,
+        color: colors.text,
         letterSpacing: -0.5,
         marginBottom: 8,
         textAlign: 'center',
     },
     message: {
         fontSize: 15,
-        color: Colors.dark.icon,
+        color: colors.icon,
         textAlign: 'center',
         marginBottom: 24,
         lineHeight: 22,
@@ -160,17 +166,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     btnDefault: {
-        backgroundColor: Colors.dark.accent,
-        shadowColor: Colors.dark.accent,
+        backgroundColor: colors.accent,
+        shadowColor: colors.accent,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 10,
         elevation: 6,
     },
     btnCancel: {
-        backgroundColor: Colors.dark.background,
+        backgroundColor: colors.background,
         borderWidth: 1,
-        borderColor: Colors.dark.border,
+        borderColor: colors.border,
     },
     btnDestructive: {
         backgroundColor: 'rgba(239, 68, 68, 0.15)',
@@ -185,9 +191,10 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     textCancel: {
-        color: Colors.dark.icon,
+        color: colors.icon,
     },
     textDestructive: {
         color: '#EF4444',
     },
-});
+  });
+}

@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from './CustomAlert';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Note } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Colors, NOTE_COLORS, NOTE_BORDER_COLORS, NOTE_ACCENT_COLORS } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 interface NoteCardProps {
   note: Note;
@@ -26,6 +27,8 @@ export default function NoteCard({
   isSelected = false, isSelectionMode = false,
   onTaskToggle, index = 0,
 }: NoteCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   // ─── Animation values ──────────────────────────────────────
   const scale = useSharedValue(1);
   const glow = useSharedValue(0);
@@ -117,7 +120,7 @@ export default function NoteCard({
                 onPress={(e) => { e.stopPropagation(); handleDeletePrompt(); }}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="trash-outline" size={13} color={Colors.dark.danger} />
+                <Ionicons name="trash-outline" size={13} color={colors.danger} />
               </TouchableOpacity>
             )}
 
@@ -151,7 +154,7 @@ export default function NoteCard({
                     {task.completed && <Ionicons name="checkmark" size={9} color="#fff" />}
                   </View>
                   <Text
-                    style={[styles.taskText, task.completed && { color: Colors.dark.icon, textDecorationLine: 'line-through' }]}
+                    style={[styles.taskText, task.completed && { color: colors.icon, textDecorationLine: 'line-through' }]}
                     numberOfLines={1}
                   >
                     {task.text}
@@ -192,7 +195,7 @@ export default function NoteCard({
           {/* ── Footer ────────────────────────────────────────── */}
           <View style={styles.footer}>
             <View style={styles.footerLeft}>
-              <Ionicons name="calendar-outline" size={10} color={Colors.dark.icon} />
+              <Ionicons name="calendar-outline" size={10} color={colors.icon} />
               <Text style={styles.dateText}>{note.date}</Text>
             </View>
 
@@ -200,7 +203,7 @@ export default function NoteCard({
             {!note.tasks && wordCount > 0 && (
               <View style={[styles.wordBadge, { backgroundColor: `${accent}18` }]}>
                 <Text style={[styles.wordBadgeText, { color: accent }]}>
-                  {wordCount}w
+                  {wordCount} words
                 </Text>
               </View>
             )}
@@ -219,7 +222,10 @@ export default function NoteCard({
   );
 }
 
-const styles = StyleSheet.create({
+type ThemeColors = typeof Colors.dark;
+
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   wrapper: {
     flex: 1,
     margin: 6,
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     padding: 14,
     paddingTop: 18,
-    backgroundColor: '#0F172A',   // solid dark base always
+    backgroundColor: colors.cardBase,
   },
 
   colorOverlay: {
@@ -305,7 +311,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: Colors.dark.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -314,7 +320,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.dark.text,
+    color: colors.text,
     marginBottom: 9,
     letterSpacing: -0.4,
     lineHeight: 21,
@@ -323,7 +329,7 @@ const styles = StyleSheet.create({
   // ─── Note body ──────────────────────────────────────────────
   body: {
     fontSize: 12.5,
-    color: Colors.dark.icon,
+    color: colors.icon,
     lineHeight: 19,
     flex: 1,
   },
@@ -352,7 +358,7 @@ const styles = StyleSheet.create({
 
   taskText: {
     fontSize: 12,
-    color: Colors.dark.text,
+    color: colors.text,
     flex: 1,
     fontWeight: '500',
     lineHeight: 17,
@@ -376,7 +382,7 @@ const styles = StyleSheet.create({
   progressBg: {
     flex: 1,
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -401,7 +407,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: colors.border,
   },
 
   footerLeft: {
@@ -412,7 +418,7 @@ const styles = StyleSheet.create({
 
   dateText: {
     fontSize: 10,
-    color: Colors.dark.icon,
+    color: colors.icon,
     fontWeight: '500',
     opacity: 0.75,
   },
@@ -441,4 +447,5 @@ const styles = StyleSheet.create({
     color: '#34D399',
     letterSpacing: 0.3,
   },
-});
+  });
+}

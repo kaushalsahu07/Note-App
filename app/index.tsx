@@ -1,16 +1,16 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, Note, deleteNote, updateNote, setNotesChangeListener } from '../utils/storage';
+import { loadNotes, Note, deleteNote, updateNote, setNotesChangeListener, togglePinNote } from '../utils/storage';
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
-  FadeInDown, FadeInUp, LinearTransition, ZoomIn,
+  FadeInDown, FadeInUp, FadeOutDown, LinearTransition, ZoomIn,
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
   interpolate, Extrapolation
 } from 'react-native-reanimated';
@@ -33,6 +33,8 @@ export default function NotesScreen() {
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const fabScale = useSharedValue(1);
   const fabAnimStyle = useAnimatedStyle(() => ({
@@ -44,6 +46,16 @@ export default function NotesScreen() {
     loadStoredNotes();
     setNotesChangeListener(setNotes);
   }, []);
+
+  // Exit selection mode on hardware back
+  useEffect(() => {
+    if (!isSelectionMode) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      clearSelection();
+      return true;
+    });
+    return () => sub.remove();
+  }, [isSelectionMode]);
 
   const checkUsername = async () => {
     try {
@@ -91,16 +103,58 @@ export default function NotesScreen() {
     if (success) setNotes(notes.map(n => n.id === noteId ? updatedNote : n));
   };
 
-  const handleDeleteNote = async (noteId: string) => {
-    const success = await deleteNote(noteId);
-    if (success) loadStoredNotes();
-    else Alert.alert('Error', 'Failed to delete note');
+  const clearSelection = () => {
+    setSelectedIds([]);
+    setIsSelectionMode(false);
   };
 
-  const filteredNotes = notes.filter(note => {
-    const q = searchQuery.toLowerCase();
-    return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
-  });
+  const handleLongPress = (id: string) => {
+    setIsSelectionMode(true);
+    setSelectedIds([id]);
+  };
+
+  const handleCardPress = (item: Note) => {
+    if (isSelectionMode) {
+      setSelectedIds(prev =>
+        prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id]
+      );
+    } else {
+      router.push(item.tasks ? `/edit/todo/${item.id}` : `/note/${item.id}`);
+    }
+  };
+
+  const allSelectedPinned = selectedIds.length > 0 &&
+    selectedIds.every(id => notes.find(n => n.id === id)?.pinned);
+
+  const handlePinSelected = async () => {
+    await Promise.all(selectedIds.map(id => togglePinNote(id)));
+    clearSelection();
+  };
+
+  const handleDeleteSelected = () => {
+    Alert.alert(
+      `Delete ${selectedIds.length} item${selectedIds.length > 1 ? 's' : ''}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            await Promise.all(selectedIds.map(id => deleteNote(id)));
+            clearSelection();
+            loadStoredNotes();
+          },
+        },
+      ]
+    );
+  };
+
+  const filteredNotes = notes
+    .filter(note => {
+      const q = searchQuery.toLowerCase();
+      return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
+    })
+    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
   const handleFabPressIn = () => { fabScale.value = withSpring(0.88); };
   const handleFabPressOut = () => { fabScale.value = withSpring(1); };
@@ -155,8 +209,10 @@ export default function NotesScreen() {
           <NoteCard
             note={item}
             index={index}
-            onDelete={() => handleDeleteNote(item.id)}
-            onPress={() => router.push(item.tasks ? `/edit/todo/${item.id}` : `/note/${item.id}`)}
+            onPress={() => handleCardPress(item)}
+            onLongPress={() => handleLongPress(item.id)}
+            isSelectionMode={isSelectionMode}
+            isSelected={selectedIds.includes(item.id)}
             onTaskToggle={handleTaskToggle}
           />
         )}
@@ -186,22 +242,59 @@ export default function NotesScreen() {
         }
       />
 
-      {/* FAB */}
-      <Animated.View entering={ZoomIn.delay(400)} style={styles.fabWrapper}>
-        <Animated.View style={fabAnimStyle}>
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => router.push('/select-type')}
-            onPressIn={handleFabPressIn}
-            onPressOut={handleFabPressOut}
-            activeOpacity={1}
-          >
-            <View style={styles.fabInner}>
-              <Ionicons name="add" size={30} color="#fff" />
-            </View>
-          </TouchableOpacity>
+      {/* FAB — hide in selection mode */}
+      {!isSelectionMode && (
+        <Animated.View entering={ZoomIn.delay(400)} style={styles.fabWrapper}>
+          <Animated.View style={fabAnimStyle}>
+            <TouchableOpacity
+              style={styles.fab}
+              onPress={() => router.push('/select-type')}
+              onPressIn={handleFabPressIn}
+              onPressOut={handleFabPressOut}
+              activeOpacity={1}
+            >
+              <View style={styles.fabInner}>
+                <Ionicons name="add" size={30} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      )}
+
+      {/* Selection action bar */}
+      {isSelectionMode && (
+        <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOutDown.duration(200)} style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionBarCancel} onPress={clearSelection}>
+            <Ionicons name="close" size={20} color={colors.icon} />
+          </TouchableOpacity>
+
+          <Text style={styles.actionBarCount}>
+            {selectedIds.length} selected
+          </Text>
+
+          <View style={styles.actionBarBtns}>
+            <TouchableOpacity
+              style={[styles.actionBarBtn, { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` }]}
+              onPress={handlePinSelected}
+              disabled={selectedIds.length === 0}
+            >
+              <Text style={styles.actionBarBtnEmoji}>📌</Text>
+              <Text style={[styles.actionBarBtnText, { color: colors.accent }]}>
+                {allSelectedPinned ? 'Unpin' : 'Pin'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBarBtn, { backgroundColor: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.3)' }]}
+              onPress={handleDeleteSelected}
+              disabled={selectedIds.length === 0}
+            >
+              <Ionicons name="trash" size={16} color={colors.danger} />
+              <Text style={[styles.actionBarBtnText, { color: colors.danger }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Username Modal */}
       <Modal visible={showUsernameModal} transparent animationType="fade"
@@ -475,6 +568,59 @@ function makeStyles(colors: ThemeColors) {
   confirmBtnText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  // Action bar
+  actionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingBottom: 32,
+    backgroundColor: colors.surfaceSolid,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 12,
+  },
+  actionBarCancel: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionBarCount: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  actionBarBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  actionBarBtnEmoji: {
+    fontSize: 15,
+  },
+  actionBarBtnText: {
+    fontSize: 14,
     fontWeight: '700',
   },
   });

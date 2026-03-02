@@ -17,6 +17,7 @@ export interface Note {
   color: string;
   lastModified: string;
   tasks?: TodoItem[];
+  pinned?: boolean;
 }
 
 interface SavedPassword {
@@ -88,6 +89,21 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error updating note:', error);
+    return false;
+  }
+}
+
+export async function togglePinNote(id: string): Promise<boolean> {
+  try {
+    const notes = await loadNotes();
+    const updatedNotes = notes.map(note =>
+      note.id === id ? { ...note, pinned: !note.pinned } : note
+    );
+    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    notesChangeCallback?.(updatedNotes);
+    return true;
+  } catch (error) {
+    console.error('Error toggling pin:', error);
     return false;
   }
 }

@@ -1,4 +1,3 @@
-import { CustomAlert as Alert } from './CustomAlert';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Note } from '../utils/storage';
@@ -14,8 +13,8 @@ import { useTheme } from '../context/ThemeContext';
 
 interface NoteCardProps {
   note: Note;
-  onDelete: () => void;
   onPress: () => void;
+  onLongPress?: () => void;
   isSelected?: boolean;
   isSelectionMode?: boolean;
   onTaskToggle?: (noteId: string, taskId: string) => void;
@@ -23,7 +22,7 @@ interface NoteCardProps {
 }
 
 export default function NoteCard({
-  note, onDelete, onPress,
+  note, onPress, onLongPress,
   isSelected = false, isSelectionMode = false,
   onTaskToggle, index = 0,
 }: NoteCardProps) {
@@ -45,17 +44,6 @@ export default function NoteCard({
   const handlePressOut = () => {
     scale.value = withTiming(1, { duration: 200 });
     glow.value = withTiming(0, { duration: 300 });
-  };
-
-  const handleDeletePrompt = () => {
-    Alert.alert(
-      note.tasks ? 'Delete List' : 'Delete Note',
-      `Delete "${note.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: onDelete },
-      ],
-    );
   };
 
   // ─── Colors ────────────────────────────────────────────────
@@ -85,14 +73,15 @@ export default function NoteCard({
         <Pressable
           style={[
             styles.card,
-            { borderColor: isSelected ? accent : cardBorder, shadowColor: accent },
+            { borderColor: isSelected ? accent : note.pinned ? accent : cardBorder, shadowColor: accent },
             isSelected && styles.selectedCard,
+            note.pinned && styles.pinnedCard,
           ]}
           onPress={onPress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          onLongPress={handleDeletePrompt}
-          delayLongPress={500}
+          onLongPress={onLongPress}
+          delayLongPress={350}
         >
           {/* Solid dark base + translucent color tint overlay */}
           <View style={[styles.colorOverlay, { backgroundColor: cardBg }]} />
@@ -100,29 +89,26 @@ export default function NoteCard({
           {/* ── Top accent stripe ─────────────────────────────── */}
           <View style={[styles.topStripe, { backgroundColor: accent }]} />
 
-          {/* ── Header row: icon badge + optional delete ──────── */}
+          {/* ── Header row: icon badge + pin + delete ─────────── */}
           <View style={styles.headerRow}>
-            <View style={[styles.typePill, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
-              <Ionicons
-                name={note.tasks ? 'checkbox' : 'document-text'}
-                size={11}
-                color={accent}
-              />
-              <Text style={[styles.typePillText, { color: accent }]}>
-                {note.tasks ? 'List' : 'Note'}
-              </Text>
+            <View style={styles.headerLeft}>
+              <View style={[styles.typePill, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
+                <Ionicons
+                  name={note.tasks ? 'checkbox' : 'document-text'}
+                  size={11}
+                  color={accent}
+                />
+                <Text style={[styles.typePillText, { color: accent }]}>
+                  {note.tasks ? 'List' : 'Note'}
+                </Text>
+              </View>
+              {note.pinned && (
+                <Text style={styles.pinnedBadge}>📌</Text>
+              )}
             </View>
 
-            {/* Delete icon (always visible, small) */}
-            {!isSelectionMode && (
-              <TouchableOpacity
-                style={[styles.deleteBtn, { borderColor: `${accent}30` }]}
-                onPress={(e) => { e.stopPropagation(); handleDeletePrompt(); }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="trash-outline" size={13} color={colors.danger} />
-              </TouchableOpacity>
-            )}
+            {/* Delete icon + pin button (always visible, small) */}
+            {!isSelectionMode && null}
 
             {/* Selection checkbox */}
             {isSelectionMode && (
@@ -280,6 +266,16 @@ function makeStyles(colors: ThemeColors) {
     marginBottom: 10,
   },
 
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  pinnedBadge: {
+    fontSize: 12,
+  },
+
   typePill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,6 +300,32 @@ function makeStyles(colors: ThemeColors) {
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  headerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+
+  pinnedCard: {
+    borderWidth: 2,
+  },
+
+  pinBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.border + '30',
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  pinEmoji: {
+    fontSize: 13,
+    lineHeight: 16,
   },
 
   checkbox: {

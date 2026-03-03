@@ -2,7 +2,7 @@
   "expo": {
     "name": "Notes",
     "slug": "note",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "owner": "kaushalsahu.07",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0b0b0b"
+      "backgroundColor": "#0F0025"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#0b0b0b"
+        "backgroundColor": "#0F0025"
       },
       "permissions": [
         "WRITE_EXTERNAL_STORAGE",

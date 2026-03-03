@@ -7,6 +7,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface SavedPassword {
@@ -54,7 +55,8 @@ export default function PasswordManager() {
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
   // ─── Init ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -486,429 +488,429 @@ function SheetModal({
 
 // ─── Styles ──────────────────────────────────────────────────────────
 
-function makeStyles(colors: ThemeColors) {
+function makeStyles(colors: ThemeColors, topInset: number = 0) {
   return StyleSheet.create({
 
-  // ─── Trigger button ─────────────────────────────────────────────
-  managerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-  },
-  managerBtnIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(129,140,248,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  managerBtnText: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  managerBtnRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+    // ─── Trigger button ─────────────────────────────────────────────
+    managerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+    },
+    managerBtnIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: 'rgba(129,140,248,0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    managerBtnText: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    managerBtnRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
 
-  // ─── Main screen ────────────────────────────────────────────────
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+    // ─── Main screen ────────────────────────────────────────────────
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // ─── Header ─────────────────────────────────────────────────────
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 30,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+    // ─── Header ─────────────────────────────────────────────────────
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 18,
+      paddingTop: Math.max(topInset, 16) + 8,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerCenter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    headerTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
 
-  // ─── Icon buttons ────────────────────────────────────────────────
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addIconBtn: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  deleteIconBtn: {
-    backgroundColor: 'rgba(248,113,113,0.10)',
-    borderColor: 'rgba(248,113,113,0.25)',
-  },
+    // ─── Icon buttons ────────────────────────────────────────────────
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surfaceSolid,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceSolid,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    addIconBtn: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    deleteIconBtn: {
+      backgroundColor: 'rgba(248,113,113,0.10)',
+      borderColor: 'rgba(248,113,113,0.25)',
+    },
 
-  // ─── Search ─────────────────────────────────────────────────────
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+    // ─── Search ─────────────────────────────────────────────────────
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      margin: 16,
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    searchInput: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '500',
+    },
 
-  // ─── List ────────────────────────────────────────────────────────
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    gap: 12,
-  },
+    // ─── List ────────────────────────────────────────────────────────
+    list: {
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+      gap: 12,
+    },
 
-  // ─── Password card ───────────────────────────────────────────────
-  pwCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 18,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  pwAccentBar: {
-    width: 4,
-    borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
-  },
-  pwMain: {
-    flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    gap: 8,
-  },
-  pwHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  pwTitleWrap: {
-    flex: 1,
-    gap: 5,
-  },
-  pwTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  catPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  catText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-  pwDate: {
-    color: colors.icon,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  pwBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  pwValue: {
-    flex: 1,
-    color: colors.icon,
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.5,
-  },
-  pwActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
+    // ─── Password card ───────────────────────────────────────────────
+    pwCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 18,
+      borderWidth: 1,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    pwAccentBar: {
+      width: 4,
+      borderTopLeftRadius: 18,
+      borderBottomLeftRadius: 18,
+    },
+    pwMain: {
+      flex: 1,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
+      gap: 8,
+    },
+    pwHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    pwTitleWrap: {
+      flex: 1,
+      gap: 5,
+    },
+    pwTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '700',
+      letterSpacing: -0.2,
+    },
+    catPill: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    catText: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textTransform: 'uppercase',
+    },
+    pwDate: {
+      color: colors.icon,
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    pwBody: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    pwValue: {
+      flex: 1,
+      color: colors.icon,
+      fontSize: 13,
+      fontWeight: '500',
+      letterSpacing: 0.5,
+    },
+    pwActions: {
+      flexDirection: 'row',
+      gap: 6,
+    },
 
-  // ─── Empty state ─────────────────────────────────────────────────
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    paddingTop: 60,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(129,140,248,0.12)',
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  emptySubtitle: {
-    color: colors.icon,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    marginTop: 8,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  emptyBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+    // ─── Empty state ─────────────────────────────────────────────────
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 12,
+      paddingTop: 60,
+    },
+    emptyIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: 'rgba(129,140,248,0.12)',
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    emptySubtitle: {
+      color: colors.icon,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    emptyBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.accent,
+      borderRadius: 14,
+      paddingHorizontal: 22,
+      paddingVertical: 12,
+      marginTop: 8,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    emptyBtnText: {
+      color: '#fff',
+      fontSize: 15,
+      fontWeight: '700',
+    },
 
-  // ─── Bottom sheet ────────────────────────────────────────────────
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(8,12,20,0.85)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: colors.surfaceSolid,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: colors.border,
-    paddingHorizontal: 22,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: 16,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 22,
-  },
-  sheetTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
+    // ─── Bottom sheet ────────────────────────────────────────────────
+    sheetOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(8,12,20,0.85)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: colors.surfaceSolid,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      borderWidth: 1,
+      borderBottomWidth: 0,
+      borderColor: colors.border,
+      paddingHorizontal: 22,
+      paddingBottom: 36,
+      paddingTop: 12,
+    },
+    sheetHandle: {
+      alignSelf: 'center',
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 16,
+    },
+    sheetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 22,
+    },
+    sheetTitle: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
 
-  // ─── Form fields ─────────────────────────────────────────────────
-  fieldLabel: {
-    color: colors.icon,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    marginTop: 14,
-  },
-  fieldInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-  },
-  textInput: {
-    flex: 1,
-    paddingVertical: 13,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    borderRadius: 16,
-    paddingVertical: 15,
-    marginTop: 24,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  saveBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+    // ─── Form fields ─────────────────────────────────────────────────
+    fieldLabel: {
+      color: colors.icon,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      marginBottom: 6,
+      marginTop: 14,
+    },
+    fieldInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+    },
+    textInput: {
+      flex: 1,
+      paddingVertical: 13,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    saveBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      paddingVertical: 15,
+      marginTop: 24,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    saveBtnText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+    },
 
-  // ─── Settings modal ──────────────────────────────────────────────
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(8,12,20,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 28,
-  },
-  settingsCard: {
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 24,
-    padding: 22,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 16,
-  },
-  settingsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  settingsTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 10,
-  },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingInfo: {
-    flex: 1,
-  },
-  settingTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  settingDesc: {
-    color: colors.icon,
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 17,
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 2,
-    justifyContent: 'center',
-  },
-  toggleOn: {
-    backgroundColor: '#34D399',
-    borderColor: '#34D399',
-  },
-  toggleKnob: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.icon,
-    alignSelf: 'flex-start',
-  },
-  toggleKnobOn: {
-    backgroundColor: '#fff',
-    alignSelf: 'flex-end',
-  },
+    // ─── Settings modal ──────────────────────────────────────────────
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(8,12,20,0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 28,
+    },
+    settingsCard: {
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 24,
+      padding: 22,
+      width: '100%',
+      maxWidth: 400,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.2,
+      shadowRadius: 24,
+      elevation: 16,
+    },
+    settingsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 18,
+    },
+    settingsTitle: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 10,
+    },
+    settingIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    settingInfo: {
+      flex: 1,
+    },
+    settingTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+      marginBottom: 3,
+    },
+    settingDesc: {
+      color: colors.icon,
+      fontSize: 12,
+      fontWeight: '500',
+      lineHeight: 17,
+    },
+    toggle: {
+      width: 50,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 2,
+      justifyContent: 'center',
+    },
+    toggleOn: {
+      backgroundColor: '#34D399',
+      borderColor: '#34D399',
+    },
+    toggleKnob: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: colors.icon,
+      alignSelf: 'flex-start',
+    },
+    toggleKnobOn: {
+      backgroundColor: '#fff',
+      alignSelf: 'flex-end',
+    },
   });
 }

@@ -1,6 +1,21 @@
 # Note-App
 
-A modern, dark-themed notes & to-do app built with **Expo** (React Native) and **Expo Router**.
+A modern, light & dark-themed notes & to-do app built with **Expo** (React Native) and **Expo Router**.
+
+---
+
+## Core Features
+
+- **🌓 Dynamic Theming**: Toggle between Dark and Light modes with a premium glassmorphic interface.
+- **📝 Versatile Notes**: Create text notes with custom background colors and quick-edit support.
+- **✅ Interactive To-Dos**: Efficient task management with a dedicated list editor and progress tracking.
+- **🔐 Privacy & Security**: 
+  - **100% Offline & Private**: All your notes and data are stored locally on your device. We have **no cloud storage**, so your data never leaves your phone.
+  - **Note Locking**: Secure individual sensitive notes with individual password protection.
+  - **Password Manager**: An integrated, secure tool for managing your credentials locally.
+- **🔍 Quick Navigation**: Animated search bar for real-time filtering of your content.
+- **⚡ High Performance**: Smooth 60 FPS transitions and micro-animations powered by Reanimated.
+- **☁️ Data Sovereignty**: Robust backup and restore system using JSON export/import.
 
 ---
 
@@ -15,62 +30,6 @@ A modern, dark-themed notes & to-do app built with **Expo** (React Native) and *
 | Storage | AsyncStorage via `utils/storage.ts` |
 | Language | TypeScript |
 
----
-
-## Project Structure
-
-```
-Note-App/
-├── app/                        # All screens (Expo Router file-based routing)
-│   ├── _layout.tsx             # Root Stack navigator — registers every screen
-│   ├── index.tsx               # Home screen: notes grid + search + FAB
-│   ├── select-type.tsx         # Modal: choose Note or To-Do before creating
-│   ├── new.tsx                 # Modal: create a new text Note
-│   ├── new-todo.tsx            # Modal: create a new To-Do list
-│   ├── note/
-│   │   └── [id].tsx            # View/edit a text Note (supports password lock)
-│   └── edit/
-│       └── todo/
-│           └── [id].tsx        # Edit an existing To-Do list
-│
-├── components/                 # Reusable UI components
-│   ├── NoteCard.tsx            # Card shown in the notes grid (note + todo variants)
-│   ├── TodoList.tsx            # Interactive task-list editor (used in new-todo & edit)
-│   ├── SearchBar.tsx           # Animated search input
-│   ├── Settings.tsx            # Settings sheet (backup, restore, export, password mgr)
-│   ├── PasswordManager.tsx     # Full password-manager feature inside Settings
-│   ├── AccessPasswordDialog.tsx  # Dialog: enter password to unlock a protected note
-│   └── PasswordProtectionDialog.tsx  # Dialog: set/remove password on a note
-│
-├── constants/
-│   └── Colors.ts               # Design tokens: dark palette, note color arrays
-│
-├── utils/
-│   ├── storage.ts              # AsyncStorage CRUD for notes (Note & TodoItem types)
-│   ├── backupRestore.ts        # Export / import notes as JSON file
-│   ├── exportNotes.ts          # Export individual notes as plain text
-│   └── passwordUtils.ts        # Simple password hash helper
-│
-├── assets/                     # Static assets (app icon etc.)
-├── app.json                    # Expo app config
-├── tsconfig.json
-└── package.json
-```
-
----
-
-## Screen Flow
-
-```
-index (Home)
-  └─► select-type  (modal – pick type)
-        ├─► new          (modal – write a note)
-        └─► new-todo     (modal – build a task list)
-
-index
-  └─► note/[id]          (modal – view/edit note, password protected)
-  └─► edit/todo/[id]     (modal – edit task list)
-```
 
 ---
 
@@ -85,19 +44,17 @@ Scan the QR code with **Expo Go** on your device, or press `a` for Android emula
 
 ---
 
-## Design System
 
-All colors live in `constants/Colors.ts`.  
-Key tokens:
+## Contact
+For any inquiries, reach out at [kaushalsahu.me@gmailcom](mailto:kaushalsahu.me@gmailcom).<br>
+GitHub: [@kaushalsahu07](https://github.com/kaushalsahu07).<br>
+Linkedin: [@kaushalsahu07](www.linkedin.com/in/kaushalsahu07).<br>
+Instagram: [@cd.kaushal](https://www.instagram.com/cd.kaushal?igsh=cTVram1ia3Vvamxz).<br>
+Portfolio: [kaushalsahu.tech ](https://kaushalsahu.tech/)<br>
+X (Tweeter): [@kaushalsahu_07](https://x.com/kaushalsahu_07?t=7nk-jApWrJkgW6YwklJZWQ&s=09).
 
-| Token | Purpose |
-|---|---|
-| `Colors.dark.background` | Main screen background |
-| `Colors.dark.surfaceSolid` | Cards, modals, bottom bars |
-| `Colors.dark.accent` | Primary brand color (indigo) |
-| `Colors.dark.accentSecondary` | Secondary accent (emerald, for todos) |
-| `Colors.dark.text` | Primary text |
-| `Colors.dark.icon` | Muted / secondary text |
-| `Colors.dark.border` | Subtle dividers |
-| `NOTE_COLORS[]` | Background tints for note cards |
-| `NOTE_ACCENT_COLORS[]` | Vivid accent colors matching each card |
+## Screenshots
+
+
+
+<br> Created with ❤️ by Kaushal Sahu

@@ -9,6 +9,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SettingRowProps {
   icon: string;
@@ -40,7 +41,8 @@ function SettingRow({ icon, iconColor, label, description, onPress, index, color
 
 export default function Settings({ onClose }: { onClose: () => void }) {
   const { colors, isDark, toggleTheme } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
   const handleBackup = async () => {
     const success = await createBackup();
@@ -152,104 +154,104 @@ export default function Settings({ onClose }: { onClose: () => void }) {
 
 type ThemeColors = typeof Colors.dark;
 
-function makeStyles(colors: ThemeColors) {
+function makeStyles(colors: ThemeColors, topInset: number = 0) {
   return StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  handleBar: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginTop: 12, marginBottom: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    fontSize: 24, fontWeight: '800',
-    color: colors.text, letterSpacing: -0.6,
-  },
-  closeBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: 1, borderColor: colors.border,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  scroll: { padding: 20, paddingBottom: 60 },
-  sectionLabel: {
-    fontSize: 13, fontWeight: '700',
-    color: colors.icon,
-    letterSpacing: 0.5,
-    marginTop: 24, marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  card: {
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 14,
-  },
-  themeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 14,
-  },
-  rowIcon: {
-    width: 42, height: 42, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  rowContent: { flex: 1 },
-  rowLabel: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
-  rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2 },
-  separator: {
-    height: 1, backgroundColor: colors.border,
-    marginLeft: 72,
-  },
-  themeToggle: {
-    width: 50, height: 28, borderRadius: 14,
-    backgroundColor: colors.glassLight,
-    borderWidth: 1, borderColor: colors.border,
-    padding: 3, justifyContent: 'center',
-  },
-  themeToggleDark: {
-    backgroundColor: '#818CF8',
-    borderColor: '#818CF8',
-  },
-  themeToggleKnob: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: colors.icon,
-    alignSelf: 'flex-start',
-  },
-  themeToggleKnobDark: {
-    backgroundColor: '#fff',
-    alignSelf: 'flex-end',
-  },
-  aboutCard: {
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 20, borderWidth: 1, borderColor: colors.border,
-    padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16,
-  },
-  appIconWrap: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: colors.glassLight,
-    borderWidth: 1, borderColor: colors.border,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  appName: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
-  appVersion: { fontSize: 13, color: colors.icon, marginTop: 3 },
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: topInset },
+    handleBar: {
+      width: 40, height: 4, borderRadius: 2,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginTop: 16, marginBottom: 8,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 22,
+      paddingTop: 8,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    title: {
+      fontSize: 24, fontWeight: '800',
+      color: colors.text, letterSpacing: -0.6,
+    },
+    closeBtn: {
+      width: 38, height: 38, borderRadius: 19,
+      backgroundColor: colors.surfaceSolid,
+      borderWidth: 1, borderColor: colors.border,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    scroll: { padding: 20, paddingBottom: 60 },
+    sectionLabel: {
+      fontSize: 13, fontWeight: '700',
+      color: colors.icon,
+      letterSpacing: 0.5,
+      marginTop: 24, marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    card: {
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 14,
+    },
+    themeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 14,
+    },
+    rowIcon: {
+      width: 42, height: 42, borderRadius: 14,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    rowContent: { flex: 1 },
+    rowLabel: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
+    rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2 },
+    separator: {
+      height: 1, backgroundColor: colors.border,
+      marginLeft: 72,
+    },
+    themeToggle: {
+      width: 50, height: 28, borderRadius: 14,
+      backgroundColor: colors.glassLight,
+      borderWidth: 1, borderColor: colors.border,
+      padding: 3, justifyContent: 'center',
+    },
+    themeToggleDark: {
+      backgroundColor: '#818CF8',
+      borderColor: '#818CF8',
+    },
+    themeToggleKnob: {
+      width: 22, height: 22, borderRadius: 11,
+      backgroundColor: colors.icon,
+      alignSelf: 'flex-start',
+    },
+    themeToggleKnobDark: {
+      backgroundColor: '#fff',
+      alignSelf: 'flex-end',
+    },
+    aboutCard: {
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+      padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16,
+    },
+    appIconWrap: {
+      width: 64, height: 64, borderRadius: 20,
+      backgroundColor: colors.glassLight,
+      borderWidth: 1, borderColor: colors.border,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    appName: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
+    appVersion: { fontSize: 13, color: colors.icon, marginTop: 3 },
   });
 }

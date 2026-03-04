@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, Note, deleteNote, updateNote, setNotesChangeListener, togglePinNote } from '../utils/storage';
+import { loadNotes, togglePinNote, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener } from '../utils/storage';
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -127,8 +127,10 @@ export default function NotesScreen() {
     selectedIds.every(id => notes.find(n => n.id === id)?.pinned);
 
   const handlePinSelected = async () => {
-    await Promise.all(selectedIds.map(id => togglePinNote(id)));
-    clearSelection();
+    if (selectedIds.length === 1) {
+      await togglePinNote(selectedIds[0]);
+      clearSelection();
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -140,7 +142,7 @@ export default function NotesScreen() {
         {
           text: 'Delete', style: 'destructive',
           onPress: async () => {
-            await Promise.all(selectedIds.map(id => deleteNote(id)));
+            await deleteNotes(selectedIds);
             clearSelection();
             loadStoredNotes();
           },
@@ -196,11 +198,6 @@ export default function NotesScreen() {
         </Animated.View>
       </Animated.View>
 
-      {/* Search */}
-      <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-      </Animated.View>
-
       {/* Notes Grid */}
       <Animated.FlatList
         itemLayoutAnimation={LinearTransition}
@@ -219,6 +216,11 @@ export default function NotesScreen() {
         keyExtractor={item => item.id}
         numColumns={2}
         contentContainerStyle={styles.notesList}
+        ListHeaderComponent={
+          <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+          </Animated.View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -274,9 +276,13 @@ export default function NotesScreen() {
 
           <View style={styles.actionBarBtns}>
             <TouchableOpacity
-              style={[styles.actionBarBtn, { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` }]}
+              style={[
+                styles.actionBarBtn,
+                { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` },
+                selectedIds.length !== 1 && { opacity: 0.4 }
+              ]}
               onPress={handlePinSelected}
-              disabled={selectedIds.length === 0}
+              disabled={selectedIds.length !== 1}
             >
               <Text style={styles.actionBarBtnEmoji}>📌</Text>
               <Text style={[styles.actionBarBtnText, { color: colors.accent }]}>
@@ -349,279 +355,279 @@ type ThemeColors = typeof Colors.dark;
 
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: 22,
-    paddingTop: 64,
-    paddingBottom: 8,
-  },
-  greetingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  greetingLabel: {
-    fontSize: 15,
-    color: colors.icon,
-    fontWeight: '500',
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  greetingName: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -1.2,
-  },
-  settingsBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  statsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    backgroundColor: colors.glassLight,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statsText: {
-    fontSize: 13,
-    color: colors.icon,
-    fontWeight: '500',
-  },
-  statsDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: 2,
-  },
-  notesList: {
-    paddingHorizontal: 10,
-    paddingBottom: 120,
-    paddingTop: 6,
-  },
-  fabWrapper: {
-    position: 'absolute',
-    bottom: 36,
-    right: 24,
-    zIndex: 99,
-  },
-  fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  fabInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 80,
-    paddingHorizontal: 40,
-  },
-  emptyIconWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.glassLight,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: colors.icon,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: 22,
+      paddingTop: 64,
+      paddingBottom: 8,
+    },
+    greetingRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    greetingLabel: {
+      fontSize: 15,
+      color: colors.icon,
+      fontWeight: '500',
+      marginBottom: 2,
+      letterSpacing: 0.3,
+    },
+    greetingName: {
+      fontSize: 36,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -1.2,
+    },
+    settingsBtn: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: colors.surfaceSolid,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    statsPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 12,
+      backgroundColor: colors.glassLight,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statsText: {
+      fontSize: 13,
+      color: colors.icon,
+      fontWeight: '500',
+    },
+    statsDot: {
+      width: 3,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginHorizontal: 2,
+    },
+    notesList: {
+      paddingHorizontal: 10,
+      paddingBottom: 120,
+      paddingTop: 6,
+    },
+    fabWrapper: {
+      position: 'absolute',
+      bottom: 36,
+      right: 24,
+      zIndex: 99,
+    },
+    fab: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.55,
+      shadowRadius: 16,
+      elevation: 12,
+    },
+    fabInner: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.2)',
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingTop: 80,
+      paddingHorizontal: 40,
+    },
+    emptyIconWrapper: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: colors.glassLight,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    emptyTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8,
+      letterSpacing: -0.5,
+    },
+    emptySubtitle: {
+      fontSize: 15,
+      color: colors.icon,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
 
-  // Modal
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(8, 12, 20, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modal: {
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 28,
-    padding: 28,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 32,
-    elevation: 20,
-  },
-  modalIconRow: {
-    marginBottom: 16,
-  },
-  modalIconBg: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.glassLight,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.8,
-    marginBottom: 6,
-  },
-  modalSub: {
-    fontSize: 15,
-    color: colors.icon,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  modalInput: {
-    width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 17,
-    color: colors.text,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    fontWeight: '500',
-  },
-  modalBtns: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cancelBtnText: {
-    color: colors.icon,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  confirmBtn: {
-    flex: 1,
-    backgroundColor: colors.accent,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  confirmBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  // Action bar
-  actionBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingBottom: 32,
-    backgroundColor: colors.surfaceSolid,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 12,
-  },
-  actionBarCancel: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionBarCount: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  actionBarBtns: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionBarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  actionBarBtnEmoji: {
-    fontSize: 15,
-  },
-  actionBarBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
+    // Modal
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(8, 12, 20, 0.85)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modal: {
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 28,
+      padding: 28,
+      width: '100%',
+      maxWidth: 400,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.2,
+      shadowRadius: 32,
+      elevation: 20,
+    },
+    modalIconRow: {
+      marginBottom: 16,
+    },
+    modalIconBg: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      backgroundColor: colors.glassLight,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.8,
+      marginBottom: 6,
+    },
+    modalSub: {
+      fontSize: 15,
+      color: colors.icon,
+      marginBottom: 24,
+      textAlign: 'center',
+    },
+    modalInput: {
+      width: '100%',
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 16,
+      fontSize: 17,
+      color: colors.text,
+      marginBottom: 20,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      fontWeight: '500',
+    },
+    modalBtns: {
+      flexDirection: 'row',
+      gap: 12,
+      width: '100%',
+    },
+    cancelBtn: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cancelBtnText: {
+      color: colors.icon,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    confirmBtn: {
+      flex: 1,
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: 'center',
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    confirmBtnText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    // Action bar
+    actionBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      paddingBottom: 32,
+      backgroundColor: colors.surfaceSolid,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 12,
+    },
+    actionBarCancel: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionBarCount: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+    },
+    actionBarBtns: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    actionBarBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+    },
+    actionBarBtnEmoji: {
+      fontSize: 15,
+    },
+    actionBarBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
   });
 }

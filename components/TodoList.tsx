@@ -114,8 +114,9 @@ export default function TodoList({ tasks, onTasksChange }: TodoListProps) {
         renderItem={renderItem}
         keyExtractor={item => item.id}
         style={styles.list}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 150 }]}
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets={true}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="list-outline" size={32} color={colors.icon} />
@@ -131,107 +132,107 @@ type ThemeColors = typeof Colors.dark;
 
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // ─── Input row ───────────────────────────────────────────────
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  addBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    // ─── Input row ───────────────────────────────────────────────
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 16,
+      marginBottom: 12,
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    input: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    addBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  // ─── List ────────────────────────────────────────────────────
-  list: { flex: 1 },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
+    // ─── List ────────────────────────────────────────────────────
+    list: { flex: 1 },
+    listContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 20,
+    },
 
-  // ─── Task item ───────────────────────────────────────────────
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceSolid,
-    marginBottom: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 12,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  checkboxChecked: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  taskTextWrap: { flex: 1 },
-  taskText: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  taskCompleted: {
-    textDecorationLine: 'line-through',
-    color: colors.icon,
-    fontWeight: '400',
-  },
-  editInput: {
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-  },
-  deleteBtn: { padding: 2 },
+    // ─── Task item ───────────────────────────────────────────────
+    taskItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceSolid,
+      marginBottom: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 7,
+      borderWidth: 1.5,
+      borderColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
+    checkboxChecked: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    taskTextWrap: { flex: 1 },
+    taskText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    taskCompleted: {
+      textDecorationLine: 'line-through',
+      color: colors.icon,
+      fontWeight: '400',
+    },
+    editInput: {
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+    },
+    deleteBtn: { padding: 2 },
 
-  // ─── Empty ───────────────────────────────────────────────────
-  emptyWrap: {
-    alignItems: 'center',
-    paddingTop: 40,
-    gap: 10,
-  },
-  emptyText: {
-    color: colors.icon,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+    // ─── Empty ───────────────────────────────────────────────────
+    emptyWrap: {
+      alignItems: 'center',
+      paddingTop: 40,
+      gap: 10,
+    },
+    emptyText: {
+      color: colors.icon,
+      fontSize: 14,
+      fontWeight: '500',
+    },
   });
 }

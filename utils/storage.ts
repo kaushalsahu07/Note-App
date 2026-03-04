@@ -18,6 +18,8 @@ export interface Note {
   lastModified: string;
   tasks?: TodoItem[];
   pinned?: boolean;
+  isPasswordProtected?: boolean;
+  password?: string;
 }
 
 interface SavedPassword {
@@ -64,15 +66,20 @@ export async function loadNotes(): Promise<Note[]> {
 }
 
 export async function deleteNote(id: string): Promise<boolean> {
+  return deleteNotes([id]);
+}
+
+export async function deleteNotes(ids: string[]): Promise<boolean> {
   try {
+    if (ids.length === 0) return true;
     const notes = await loadNotes();
-    const updatedNotes = notes.filter(note => note.id !== id);
+    const updatedNotes = notes.filter(note => !ids.includes(note.id));
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
-    console.log('Note deleted:', id);
+    console.log('Notes deleted:', ids);
     notesChangeCallback?.(updatedNotes);
     return true;
   } catch (error) {
-    console.error('Error deleting note:', error);
+    console.error('Error deleting notes:', error);
     return false;
   }
 }
@@ -80,7 +87,7 @@ export async function deleteNote(id: string): Promise<boolean> {
 export async function updateNote(updatedNote: Note): Promise<boolean> {
   try {
     const notes = await loadNotes();
-    const updatedNotes = notes.map(note => 
+    const updatedNotes = notes.map(note =>
       note.id === updatedNote.id ? updatedNote : note
     );
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
@@ -112,14 +119,14 @@ export async function savePasswordToManager(title: string, password: string) {
   try {
     const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
     let passwords: SavedPassword[] = savedPasswords ? JSON.parse(savedPasswords) : [];
-    
+
     const newPassword: SavedPassword = {
       id: Date.now().toString(),
       title,
       password,
       date: new Date().toLocaleDateString(),
     };
-    
+
     passwords = [newPassword, ...passwords];
     await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
     return true;

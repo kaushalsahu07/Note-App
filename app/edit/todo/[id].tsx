@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../../../components/CustomAlert';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -86,7 +86,7 @@ export default function EditTodoScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
@@ -122,7 +122,7 @@ export default function EditTodoScreen() {
       <Animated.View entering={FadeInDown.delay(180).duration(500)} style={{ flex: 1 }}>
         <TodoList tasks={tasks} onTasksChange={setTasks} />
       </Animated.View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -130,33 +130,33 @@ type ThemeColors = typeof Colors.dark;
 
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 6, paddingHorizontal: 4,
-  },
-  backText: { color: colors.icon, fontSize: 16, fontWeight: '500' },
-  saveBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.surfaceSolid,
-    paddingVertical: 10, paddingHorizontal: 18,
-    borderRadius: 22, borderWidth: 1, borderColor: colors.border,
-  },
-  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  titleInput: {
-    fontSize: 28, fontWeight: '800', color: colors.text,
-    paddingHorizontal: 22, paddingTop: 22, paddingBottom: 8,
-    letterSpacing: -0.8,
-  },
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      paddingVertical: 6, paddingHorizontal: 4,
+    },
+    backText: { color: colors.icon, fontSize: 16, fontWeight: '500' },
+    saveBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      backgroundColor: colors.surfaceSolid,
+      paddingVertical: 10, paddingHorizontal: 18,
+      borderRadius: 22, borderWidth: 1, borderColor: colors.border,
+    },
+    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    titleInput: {
+      fontSize: 28, fontWeight: '800', color: colors.text,
+      paddingHorizontal: 22, paddingTop: 22, paddingBottom: 8,
+      letterSpacing: -0.8,
+    },
   });
 }

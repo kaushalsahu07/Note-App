@@ -34,7 +34,6 @@ export default function NoteCard({
 
   const cardAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    shadowOpacity: interpolate(glow.value, [0, 1], [0.08, 0.45], Extrapolation.CLAMP),
   }));
 
   const handlePressIn = () => {
@@ -47,7 +46,12 @@ export default function NoteCard({
   };
 
   // ─── Colors ────────────────────────────────────────────────
-  const colorIndex = index % NOTE_COLORS.length;
+  const colorIndex = useMemo(() => {
+    if (!note.color) return index % NOTE_COLORS.length;
+    const foundIndex = NOTE_COLORS.indexOf(note.color);
+    return foundIndex !== -1 ? foundIndex : (index % NOTE_COLORS.length);
+  }, [note.color, index]);
+
   const cardBg = NOTE_COLORS[colorIndex];
   const cardBorder = NOTE_BORDER_COLORS[colorIndex];
   const accent = NOTE_ACCENT_COLORS[colorIndex];
@@ -73,7 +77,7 @@ export default function NoteCard({
         <Pressable
           style={[
             styles.card,
-            { borderColor: isSelected ? accent : note.pinned ? accent : cardBorder, shadowColor: accent },
+            { borderColor: isSelected ? accent : note.pinned ? accent : cardBorder },
             isSelected && styles.selectedCard,
             note.pinned && styles.pinnedCard,
           ]}
@@ -105,6 +109,11 @@ export default function NoteCard({
               {note.pinned && (
                 <Text style={styles.pinnedBadge}>📌</Text>
               )}
+              {note.isPasswordProtected && (
+                <View style={[styles.lockBadge, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
+                  <Ionicons name="lock-closed" size={10} color={accent} />
+                </View>
+              )}
             </View>
 
             {/* Delete icon + pin button (always visible, small) */}
@@ -122,7 +131,12 @@ export default function NoteCard({
           <Text style={styles.title} numberOfLines={2}>{note.title}</Text>
 
           {/* ── Body: note content OR task list ───────────────── */}
-          {note.tasks ? (
+          {note.isPasswordProtected ? (
+            <View style={styles.lockedPreview}>
+              <Ionicons name="lock-closed" size={20} color={accent} />
+              <Text style={[styles.lockedPreviewText, { color: accent }]}>Protected Note</Text>
+            </View>
+          ) : note.tasks ? (
             <View style={styles.tasksWrap}>
               {note.tasks.slice(0, 4).map((task) => (
                 <TouchableOpacity
@@ -186,7 +200,7 @@ export default function NoteCard({
             </View>
 
             {/* Word count badge for text notes */}
-            {!note.tasks && wordCount > 0 && (
+            {!note.tasks && !note.isPasswordProtected && wordCount > 0 && (
               <View style={[styles.wordBadge, { backgroundColor: `${accent}18` }]}>
                 <Text style={[styles.wordBadgeText, { color: accent }]}>
                   {wordCount} words
@@ -212,262 +226,282 @@ type ThemeColors = typeof Colors.dark;
 
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    margin: 6,
-  },
+    wrapper: {
+      flex: 1,
+      margin: 6,
+    },
 
-  // Separate layer for scale/shadow animation — no layout animation here
-  scaleLayer: {
-    flex: 1,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
+    // Separate layer for scale/shadow animation — no layout animation here
+    scaleLayer: {
+      flex: 1,
+      borderRadius: 20,
+      overflow: 'hidden',
+    },
 
-  card: {
-    flex: 1,
-    borderRadius: 20,
-    minHeight: 180,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 18,
-    elevation: 8,
-    padding: 14,
-    paddingTop: 18,
-    backgroundColor: colors.cardBase,
-  },
+    card: {
+      flex: 1,
+      borderRadius: 20,
+      minHeight: 180,
+      borderWidth: 1.5,
+      overflow: 'hidden',
+      padding: 14,
+      paddingTop: 18,
+      backgroundColor: colors.cardBase,
+    },
 
-  colorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
-  },
+    colorOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 20,
+    },
 
-  selectedCard: {
-    borderWidth: 2,
-  },
+    selectedCard: {
+      borderWidth: 2,
+    },
 
-  // ─── Top stripe ──────────────────────────────────────────────
-  topStripe: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3.5,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
+    // ─── Top stripe ──────────────────────────────────────────────
+    topStripe: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3.5,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+    },
 
-  // ─── Header ─────────────────────────────────────────────────
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
+    // ─── Header ─────────────────────────────────────────────────
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
 
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
 
-  pinnedBadge: {
-    fontSize: 12,
-  },
+    pinnedBadge: {
+      fontSize: 12,
+    },
 
-  typePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  typePillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
+    lockBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  deleteBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    typePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    typePillText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+    },
 
-  headerBtns: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
+    deleteBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: 'rgba(248, 113, 113, 0.1)',
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  pinnedCard: {
-    borderWidth: 2,
-  },
+    headerBtns: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
 
-  pinBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.border + '30',
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    pinnedCard: {
+      borderWidth: 2,
+    },
 
-  pinEmoji: {
-    fontSize: 13,
-    lineHeight: 16,
-  },
+    pinBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: colors.border + '30',
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    pinEmoji: {
+      fontSize: 13,
+      lineHeight: 16,
+    },
 
-  // ─── Title ──────────────────────────────────────────────────
-  title: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 9,
-    letterSpacing: -0.4,
-    lineHeight: 21,
-  },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  // ─── Note body ──────────────────────────────────────────────
-  body: {
-    fontSize: 12.5,
-    color: colors.icon,
-    lineHeight: 19,
-    flex: 1,
-  },
+    // ─── Title ──────────────────────────────────────────────────
+    title: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: 9,
+      letterSpacing: -0.4,
+      lineHeight: 21,
+    },
 
-  // ─── Task list ──────────────────────────────────────────────
-  tasksWrap: {
-    flex: 1,
-    gap: 6,
-  },
+    // ─── Note body ──────────────────────────────────────────────
+    body: {
+      fontSize: 12.5,
+      color: colors.icon,
+      lineHeight: 19,
+      flex: 1,
+    },
 
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+    // ─── Locked preview ─────────────────────────────────────────
+    lockedPreview: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 16,
+    },
+    lockedPreviewText: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
 
-  taskCheck: {
-    width: 15,
-    height: 15,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
+    // ─── Task list ──────────────────────────────────────────────
+    tasksWrap: {
+      flex: 1,
+      gap: 6,
+    },
 
-  taskText: {
-    fontSize: 12,
-    color: colors.text,
-    flex: 1,
-    fontWeight: '500',
-    lineHeight: 17,
-  },
+    taskRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
 
-  moreText: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 1,
-    letterSpacing: 0.2,
-  },
+    taskCheck: {
+      width: 15,
+      height: 15,
+      borderRadius: 4,
+      borderWidth: 1.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
 
-  // ─── Progress ───────────────────────────────────────────────
-  progressWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
+    taskText: {
+      fontSize: 12,
+      color: colors.text,
+      flex: 1,
+      fontWeight: '500',
+      lineHeight: 17,
+    },
 
-  progressBg: {
-    flex: 1,
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
+    moreText: {
+      fontSize: 11,
+      fontWeight: '700',
+      marginTop: 1,
+      letterSpacing: 0.2,
+    },
 
-  progressFill: {
-    height: 4,
-    borderRadius: 3,
-  },
+    // ─── Progress ───────────────────────────────────────────────
+    progressWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+    },
 
-  progressLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    minWidth: 24,
-    textAlign: 'right',
-  },
+    progressBg: {
+      flex: 1,
+      height: 4,
+      backgroundColor: colors.border,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
 
-  // ─── Footer ─────────────────────────────────────────────────
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+    progressFill: {
+      height: 4,
+      borderRadius: 3,
+    },
 
-  footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+    progressLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      minWidth: 24,
+      textAlign: 'right',
+    },
 
-  dateText: {
-    fontSize: 10,
-    color: colors.icon,
-    fontWeight: '500',
-    opacity: 0.75,
-  },
+    // ─── Footer ─────────────────────────────────────────────────
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 12,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
 
-  wordBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
+    footerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
 
-  wordBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+    dateText: {
+      fontSize: 10,
+      color: colors.icon,
+      fontWeight: '500',
+      opacity: 0.75,
+    },
 
-  doneBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+    wordBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
 
-  doneBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#34D399',
-    letterSpacing: 0.3,
-  },
+    wordBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
+
+    doneBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+
+    doneBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#34D399',
+      letterSpacing: 0.3,
+    },
   });
 }

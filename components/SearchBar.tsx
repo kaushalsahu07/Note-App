@@ -31,7 +31,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search n
       [0, 1],
       [borderBase, borderFocused],
     ),
-    shadowOpacity: withTiming(focusAnim.value * 0.12, { duration: 250 }),
+
   }));
 
   const iconAnimStyle = useAnimatedStyle(() => ({
@@ -98,10 +98,6 @@ function makeStyles(colors: ThemeColors) {
     paddingVertical: 13,
     borderRadius: 18,
     borderWidth: 1.5,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
   },
   icon: {
     marginRight: 10,

@@ -130,11 +130,6 @@ function makeStyles(colors: ThemeColors) {
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
-    shadowColor: colors.accentTertiary,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 32,
-    elevation: 20,
   },
   iconWrap: {
     width: 64,
@@ -217,11 +212,6 @@ function makeStyles(colors: ThemeColors) {
     backgroundColor: colors.accentTertiary,
     borderRadius: 14,
     paddingVertical: 14,
-    shadowColor: colors.accentTertiary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
   },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   });

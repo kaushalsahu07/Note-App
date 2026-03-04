@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../../components/CustomAlert';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Keyboard } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -215,7 +215,10 @@ export default function NoteViewScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+    >
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header — always visible */}
@@ -330,7 +333,7 @@ export default function NoteViewScreen() {
         onClose={() => setShowSetPasswordDialog(false)}
         onSetPassword={handleSetPassword}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -24,8 +24,7 @@
         "WRITE_EXTERNAL_STORAGE",
         "READ_EXTERNAL_STORAGE"
       ],
-      "package": "com.kaushal.notesapp",
-      "softwareKeyboardLayoutMode": "resize"
+      "package": "com.kaushal.notesapp"
     },
     "plugins": [
       "expo-router"

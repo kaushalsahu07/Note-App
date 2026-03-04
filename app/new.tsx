@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { saveNote } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,7 +68,10 @@ export default function NewNoteScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        >
             <StatusBar style={isDark ? 'light' : 'dark'} />
 
             {/* Header */}
@@ -136,7 +139,7 @@ export default function NewNoteScreen() {
                     ))}
                 </View>
             </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

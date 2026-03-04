@@ -3,7 +3,7 @@
     "name": "Notes",
     "slug": "note",
     "version": "1.4.0",
-    "owner": "kaushalsahu.07",
+    "owner": "knxgamers-organization",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -24,7 +24,8 @@
         "WRITE_EXTERNAL_STORAGE",
         "READ_EXTERNAL_STORAGE"
       ],
-      "package": "com.kaushal.notesapp"
+      "package": "com.kaushal.notesapp",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
       "expo-router"
@@ -35,7 +36,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "2517f29e-0924-4ae1-aada-795378b1b8ac"
+        "projectId": "8bce6584-1a0c-4a3e-88c8-c206d2e597af"
       }
     }
   }

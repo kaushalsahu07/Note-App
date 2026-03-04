@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
@@ -41,7 +41,7 @@ export default function AccessPasswordDialog({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Animated.View entering={ZoomIn.duration(350)} style={styles.dialog}>
           {/* Icon */}
           <View style={styles.iconWrap}>
@@ -102,7 +102,7 @@ export default function AccessPasswordDialog({
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

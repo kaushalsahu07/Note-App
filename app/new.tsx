@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { saveNote } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,7 +68,7 @@ export default function NewNoteScreen() {
     };
 
     return (
-        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+        <View style={styles.container}>
             <StatusBar style={isDark ? 'light' : 'dark'} />
 
             {/* Header */}
@@ -91,36 +91,28 @@ export default function NewNoteScreen() {
                 </Animated.View>
             </Animated.View>
 
-            <ScrollView
-                style={styles.scroll}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                automaticallyAdjustKeyboardInsets={true}
-                contentContainerStyle={{ paddingBottom: 150 }}
-            >
-                <Animated.View entering={FadeInDown.delay(100).duration(500)}>
-                    <TextInput
-                        style={styles.titleInput}
-                        value={title}
-                        onChangeText={setTitle}
-                        placeholder="Note title..."
-                        placeholderTextColor={colors.icon}
-                        maxLength={100}
-                    />
-                </Animated.View>
+            {/* Title */}
+            <TextInput
+                style={styles.titleInput}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Note title..."
+                placeholderTextColor={colors.icon}
+                maxLength={100}
+                returnKeyType="next"
+            />
 
-                <Animated.View entering={FadeInDown.delay(180).duration(500)}>
-                    <TextInput
-                        style={styles.contentInput}
-                        defaultValue=""
-                        onChangeText={handleContentChange}
-                        placeholder="Start writing..."
-                        placeholderTextColor={colors.icon}
-                        multiline
-                        textAlignVertical="top"
-                    />
-                </Animated.View>
-            </ScrollView>
+            {/* Content — flex:1 fills remaining space, handles its own scroll */}
+            <TextInput
+                style={styles.contentInput}
+                defaultValue=""
+                onChangeText={handleContentChange}
+                placeholder="Start writing..."
+                placeholderTextColor={colors.icon}
+                multiline
+                textAlignVertical="top"
+                scrollEnabled
+            />
 
             {/* Color Picker */}
             <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.colorBar}>
@@ -144,7 +136,7 @@ export default function NewNoteScreen() {
                     ))}
                 </View>
             </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -193,9 +185,6 @@ function makeStyles(colors: ThemeColors) {
             fontSize: 15,
             fontWeight: '700',
         },
-        scroll: {
-            flex: 1,
-        },
         titleInput: {
             fontSize: 28,
             fontWeight: '800',
@@ -206,20 +195,17 @@ function makeStyles(colors: ThemeColors) {
             letterSpacing: -0.8,
         },
         contentInput: {
+            flex: 1,
             fontSize: 17,
             color: colors.text,
             paddingHorizontal: 22,
             paddingTop: 12,
-            paddingBottom: 120,
+            paddingBottom: 16,
             lineHeight: 28,
-            minHeight: 800,
             fontWeight: '400',
+            textAlignVertical: 'top',
         },
         colorBar: {
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
             backgroundColor: colors.surfaceSolid,
             borderTopWidth: 1,
             borderTopColor: colors.border,

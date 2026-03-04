@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
@@ -49,7 +49,7 @@ export default function PasswordProtectionDialog({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Animated.View entering={ZoomIn.duration(350)} style={styles.dialog}>
           <View style={styles.iconWrap}>
             <Ionicons name="shield-checkmark" size={28} color={colors.accentTertiary} />
@@ -121,7 +121,7 @@ export default function PasswordProtectionDialog({
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

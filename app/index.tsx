@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions, BackHandler } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
@@ -305,7 +305,7 @@ export default function NotesScreen() {
       {/* Username Modal */}
       <Modal visible={showUsernameModal} transparent animationType="fade"
         onRequestClose={() => { if (username) setShowUsernameModal(false); }}>
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}>
           <Animated.View entering={ZoomIn.duration(400)} style={styles.modal}>
             <View style={styles.modalIconRow}>
               <View style={styles.modalIconBg}>
@@ -338,7 +338,7 @@ export default function NotesScreen() {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Settings Modal */}

@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from './CustomAlert';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput, TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput, Keyboard, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -422,87 +422,77 @@ function SheetModal({
   styles: ReturnType<typeof makeStyles>; colors: ThemeColors;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.sheetOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.sheet}>
-                {/* Handle */}
-                <View style={styles.sheetHandle} />
-
-                <View style={styles.sheetHeader}>
-                  <Text style={styles.sheetTitle}>{sheetTitle}</Text>
-                  <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                    <Ionicons name="close" size={20} color={colors.icon} />
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  bounces={false}
-                  automaticallyAdjustKeyboardInsets={true}
-                  contentContainerStyle={{ paddingBottom: 60 }}
-                >
-                  {/* Title */}
-                  <Text style={styles.fieldLabel}>Username / Email</Text>
-                  <View style={styles.fieldInput}>
-                    <Ionicons name="person-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={titleVal}
-                      onChangeText={onTitleChange}
-                      placeholder="e.g. john@example.com"
-                      placeholderTextColor={colors.icon}
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  {/* Category */}
-                  <Text style={styles.fieldLabel}>Website / Category</Text>
-                  <View style={styles.fieldInput}>
-                    <Ionicons name="folder-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={categoryVal}
-                      onChangeText={onCategoryChange}
-                      placeholder="e.g. Social, Work, Finance…"
-                      placeholderTextColor={colors.icon}
-                    />
-                  </View>
-
-                  {/* Password */}
-                  <Text style={styles.fieldLabel}>Password</Text>
-                  <View style={styles.fieldInput}>
-                    <Ionicons name="lock-closed-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
-                    <TextInput
-                      style={[styles.textInput, { flex: 1 }]}
-                      value={pwVal}
-                      onChangeText={onPwChange}
-                      placeholder="Enter password"
-                      placeholderTextColor={colors.icon}
-                      secureTextEntry={!showPw}
-                    />
-                    <TouchableOpacity onPress={onTogglePw} style={{ padding: 4 }}>
-                      <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.icon} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.saveBtn, (!titleVal.trim() || !pwVal.trim()) && { opacity: 0.4 }]}
-                    onPress={onSave}
-                    disabled={!titleVal.trim() || !pwVal.trim()}
-                  >
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={styles.saveBtnText}>Save Password</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.screen}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Ionicons name="chevron-down" size={22} color={colors.icon} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Ionicons name="key" size={16} color={colors.accent} />
+            <Text style={styles.headerTitle}>{sheetTitle}</Text>
           </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={[styles.sheetSaveBtn, (!titleVal.trim() || !pwVal.trim()) && { opacity: 0.4 }]}
+            onPress={onSave}
+            disabled={!titleVal.trim() || !pwVal.trim()}
+          >
+            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Text style={styles.sheetSaveBtnText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 60 }}
+        >
+          {/* Title */}
+          <Text style={styles.fieldLabel}>Username / Email</Text>
+          <View style={styles.fieldInput}>
+            <Ionicons name="person-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.textInput}
+              value={titleVal}
+              onChangeText={onTitleChange}
+              placeholder="e.g. john@example.com"
+              placeholderTextColor={colors.icon}
+              autoCapitalize="none"
+            />
+          </View>
+
+          {/* Category */}
+          <Text style={styles.fieldLabel}>Website / Category</Text>
+          <View style={styles.fieldInput}>
+            <Ionicons name="folder-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.textInput}
+              value={categoryVal}
+              onChangeText={onCategoryChange}
+              placeholder="e.g. Social, Work, Finance…"
+              placeholderTextColor={colors.icon}
+            />
+          </View>
+
+          {/* Password */}
+          <Text style={styles.fieldLabel}>Password</Text>
+          <View style={styles.fieldInput}>
+            <Ionicons name="lock-closed-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[styles.textInput, { flex: 1 }]}
+              value={pwVal}
+              onChangeText={onPwChange}
+              placeholder="Enter password"
+              placeholderTextColor={colors.icon}
+              secureTextEntry={!showPw}
+            />
+            <TouchableOpacity onPress={onTogglePw} style={{ padding: 4 }}>
+              <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.icon} />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
     </Modal>
   );
 }
@@ -751,42 +741,20 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
       fontWeight: '700',
     },
 
-    // ─── Bottom sheet ────────────────────────────────────────────────
-    sheetOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(8,12,20,0.85)',
-      justifyContent: 'flex-end',
-    },
-    sheet: {
-      backgroundColor: colors.surfaceSolid,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      borderWidth: 1,
-      borderBottomWidth: 0,
-      borderColor: colors.border,
-      paddingHorizontal: 22,
-      paddingBottom: 36,
-      paddingTop: 12,
-    },
-    sheetHandle: {
-      alignSelf: 'center',
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.border,
-      marginBottom: 16,
-    },
-    sheetHeader: {
+    // ─── Full-screen sheet save button ───────────────────────────────
+    sheetSaveBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 22,
+      gap: 5,
+      backgroundColor: colors.accent,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
     },
-    sheetTitle: {
-      color: colors.text,
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.5,
+    sheetSaveBtnText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '700',
     },
 
     // ─── Form fields ─────────────────────────────────────────────────

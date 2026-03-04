@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../../components/CustomAlert';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Keyboard } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -215,7 +215,7 @@ export default function NoteViewScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+    <View style={styles.container}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header — always visible */}
@@ -259,72 +259,78 @@ export default function NoteViewScreen() {
         </View>
       </View>
 
-      {/* VIEW MODE — always mounted, hidden when full-screen editing */}
-      <ScrollView
-        style={[styles.scroll, isContentFocused && { display: 'none' }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
+      {/* VIEW / EDIT MODE — title + meta + content in a scrollview */}
+      {!isContentFocused && (
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+          <TextInput
+            style={styles.titleInput}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Title..."
+            placeholderTextColor={colors.icon}
+            maxLength={100}
+            editable={isEditing}
+            onFocus={() => setIsEditing(true)}
+          />
+
+          <View style={styles.metaRow}>
+            <Ionicons name="calendar-outline" size={13} color={colors.icon} />
+            <Text style={styles.metaText}>{originalNote?.date || ''}</Text>
+            {originalNote?.lastModified && (
+              <>
+                <View style={styles.metaDot} />
+                <Ionicons name="time-outline" size={13} color={colors.icon} />
+                <Text style={styles.metaText}>
+                  {new Date(originalNote.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
+          <TextInput
+            style={styles.contentInputView}
+            defaultValue={contentRef.current}
+            onChangeText={handleContentChange}
+            placeholder="Your note content..."
+            placeholderTextColor={colors.icon}
+            multiline
+            textAlignVertical="top"
+            editable={isEditing}
+            onFocus={handleContentFocus}
+            scrollEnabled={false}
+          />
+        </ScrollView>
+      )}
+
+      {/* FULL-SCREEN CONTENT EDIT — only mounted when focused */}
+      {isContentFocused && (
         <TextInput
-          style={styles.titleInput}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Title..."
-          placeholderTextColor={colors.icon}
-          maxLength={100}
-          editable={isEditing}
-          onFocus={() => setIsEditing(true)}
-        />
-
-        <View style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={13} color={colors.icon} />
-          <Text style={styles.metaText}>{originalNote?.date || ''}</Text>
-          {originalNote?.lastModified && (
-            <>
-              <View style={styles.metaDot} />
-              <Ionicons name="time-outline" size={13} color={colors.icon} />
-              <Text style={styles.metaText}>
-                {new Date(originalNote.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </>
-          )}
-        </View>
-
-        <View style={styles.divider} />
-
-        <TextInput
-          style={styles.contentInputView}
+          ref={contentInputRef}
+          style={styles.contentInput}
           defaultValue={contentRef.current}
           onChangeText={handleContentChange}
           placeholder="Your note content..."
           placeholderTextColor={colors.icon}
           multiline
           textAlignVertical="top"
-          editable={isEditing}
-          onFocus={handleContentFocus}
+          scrollEnabled
+          autoFocus
         />
-      </ScrollView>
-
-      {/* EDITING MODE — always mounted, hidden when not focused */}
-      <TextInput
-        ref={contentInputRef}
-        style={[styles.contentInput, !isContentFocused && { display: 'none' }]}
-        defaultValue={contentRef.current}
-        onChangeText={handleContentChange}
-        placeholder="Your note content..."
-        placeholderTextColor={colors.icon}
-        multiline
-        textAlignVertical="top"
-        editable={true}
-      />
+      )}
 
       <PasswordProtectionDialog
         visible={showSetPasswordDialog}
         onClose={() => setShowSetPasswordDialog(false)}
         onSetPassword={handleSetPassword}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

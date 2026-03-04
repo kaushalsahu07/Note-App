@@ -55,6 +55,13 @@ X (Tweeter): [@kaushalsahu_07](https://x.com/kaushalsahu_07?t=7nk-jApWrJkgW6Ywkl
 
 ## Screenshots
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f1ae5797-0993-41ba-915b-aa5ea729d778" width="200" />
+  <img src="https://github.com/user-attachments/assets/47cf5f0c-66c3-45d9-9994-843ced73a9e8" width="200" />
+  <img src="https://github.com/user-attachments/assets/60c37736-88a6-45ec-900a-ad9896fada5a" width="200" />
+  <img src="https://github.com/user-attachments/assets/30dd76d0-968c-474f-926e-577e2429dfaf" width="200" />
+</p>
+
 
 
 <br> Created with ❤️ by Kaushal Sahu

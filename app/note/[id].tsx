@@ -2,7 +2,7 @@ import { CustomAlert as Alert } from '../../components/CustomAlert';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { loadNotes, updateNote, Note } from '../../utils/storage';
+import { loadNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 import PasswordProtectionDialog from '../../components/PasswordProtectionDialog';
@@ -114,18 +114,20 @@ export default function NoteViewScreen() {
     }
   };
 
-  const handleSetPassword = async (password: string) => {
+  const handleSetPassword = async (password: string, hint: string) => {
     if (!originalNote) return;
     const updated: Note = {
       ...originalNote,
       isPasswordProtected: true,
       password,
+      passwordHint: hint,
       lastModified: new Date().toISOString(),
     };
     const success = await updateNote(updated);
     if (success) {
+      await upsertNotePasswordInManager(originalNote.id, originalNote.title, password);
       setOriginalNote(updated);
-      Alert.alert('🔒 Note Locked', 'This note is now password protected.');
+      Alert.alert('🔒 Note Locked', 'This note is now password protected.\nPassword saved in Password Manager.');
     } else {
       Alert.alert('Error', 'Failed to set password.');
     }
@@ -145,10 +147,12 @@ export default function NoteViewScreen() {
               ...originalNote,
               isPasswordProtected: false,
               password: undefined,
+              passwordHint: undefined,
               lastModified: new Date().toISOString(),
             };
             const success = await updateNote(updated);
             if (success) {
+              await deleteNotePasswordFromManager(originalNote.id);
               setOriginalNote(updated);
               Alert.alert('🔓 Unlocked', 'Password protection removed.');
             }
@@ -204,6 +208,7 @@ export default function NoteViewScreen() {
           visible={showPasswordDialog}
           onClose={() => { setShowPasswordDialog(false); router.back(); }}
           onVerifyPassword={handleVerifyPassword}
+          hint={originalNote?.passwordHint}
         />
       </View>
     );

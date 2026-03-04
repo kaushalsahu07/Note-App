@@ -9,14 +9,16 @@ interface AccessPasswordDialogProps {
   visible: boolean;
   onClose: () => void;
   onVerifyPassword: (password: string) => void;
+  hint?: string;
 }
 
 export default function AccessPasswordDialog({
-  visible, onClose, onVerifyPassword,
+  visible, onClose, onVerifyPassword, hint,
 }: AccessPasswordDialogProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -33,6 +35,7 @@ export default function AccessPasswordDialog({
   const handleClose = () => {
     setPassword('');
     setError('');
+    setShowHint(false);
     onClose();
   };
 
@@ -70,6 +73,18 @@ export default function AccessPasswordDialog({
             <View style={styles.errorRow}>
               <Ionicons name="alert-circle" size={13} color={colors.danger} />
               <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <TouchableOpacity onPress={() => setShowHint(h => !h)} style={styles.hintToggle}>
+            <Ionicons name="help-circle-outline" size={14} color={colors.accent} />
+            <Text style={styles.hintToggleText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {showHint && (
+            <View style={styles.hintBox}>
+              <Text style={styles.hintLabel}>Hint</Text>
+              <Text style={styles.hintText}>{hint?.trim() ? hint : 'No hint was set for this note.'}</Text>
             </View>
           )}
 
@@ -170,6 +185,40 @@ function makeStyles(colors: ThemeColors) {
   errorText: {
     color: colors.danger,
     fontSize: 13,
+    fontWeight: '500',
+  },
+  hintToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  hintToggleText: {
+    fontSize: 13,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  hintBox: {
+    width: '100%',
+    backgroundColor: `${colors.accent}12`,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${colors.accent}30`,
+    padding: 12,
+    marginBottom: 8,
+  },
+  hintLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 14,
+    color: colors.text,
     fontWeight: '500',
   },
   btnRow: {

@@ -17,6 +17,7 @@ interface SavedPassword {
   date: string;
   category?: string;
   lastModified?: string;
+  noteId?: string;
 }
 
 const PASSWORDS_KEY = 'saved_passwords';
@@ -30,6 +31,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Finance: '#34D399',
   Shopping: '#FBBF24',
   Other: '#A78BFA',
+  Note: '#FB923C',
 };
 const categoryColor = (cat?: string) =>
   CATEGORY_COLORS[cat ?? 'General'] ?? '#6366F1';
@@ -169,7 +171,11 @@ export default function PasswordManager() {
     setShowEditPw(false);
   };
 
-  const deletePassword = (id: string) => {
+  const deletePassword = (id: string, noteId?: string) => {
+    if (noteId) {
+      Alert.alert('Note Password', 'This password is linked to a note. Delete the note to remove this entry.');
+      return;
+    }
     Alert.alert('Delete Password', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -220,11 +226,16 @@ export default function PasswordManager() {
                 >
                   <Ionicons name={showPasswords[item.id] ? 'eye-off' : 'eye'} size={17} color={cc} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleEdit(item)}>
-                  <Ionicons name="pencil" size={16} color={colors.icon} />
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.iconBtn, styles.deleteIconBtn]} onPress={() => deletePassword(item.id)}>
-                  <Ionicons name="trash" size={16} color={colors.danger} />
+                {!item.noteId && (
+                  <TouchableOpacity style={styles.iconBtn} onPress={() => handleEdit(item)}>
+                    <Ionicons name="pencil" size={16} color={colors.icon} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.iconBtn, !item.noteId && styles.deleteIconBtn]}
+                  onPress={() => deletePassword(item.id, item.noteId)}
+                >
+                  <Ionicons name={item.noteId ? 'lock-closed-outline' : 'trash'} size={16} color={item.noteId ? colors.icon : colors.danger} />
                 </TouchableOpacity>
               </View>
             </View>

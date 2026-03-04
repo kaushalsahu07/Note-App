@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 interface PasswordProtectionDialogProps {
   visible: boolean;
   onClose: () => void;
-  onSetPassword: (password: string) => void;
+  onSetPassword: (password: string, hint: string) => void;
 }
 
 export default function PasswordProtectionDialog({
@@ -16,6 +16,7 @@ export default function PasswordProtectionDialog({
 }: PasswordProtectionDialogProps) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [hint, setHint] = useState('');
   const [error, setError] = useState('');
   const [showPw, setShowPw] = useState(false);
   const { colors } = useTheme();
@@ -30,9 +31,10 @@ export default function PasswordProtectionDialog({
       setError('Passwords do not match');
       return;
     }
-    onSetPassword(password);
+    onSetPassword(password, hint.trim());
     setPassword('');
     setConfirm('');
+    setHint('');
     setError('');
     onClose();
   };
@@ -40,6 +42,7 @@ export default function PasswordProtectionDialog({
   const handleClose = () => {
     setPassword('');
     setConfirm('');
+    setHint('');
     setError('');
     onClose();
   };
@@ -71,7 +74,7 @@ export default function PasswordProtectionDialog({
           </View>
 
           {/* Confirm input */}
-          <View style={[styles.inputRow, { marginBottom: 0 }]}>
+          <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
               value={confirm}
@@ -79,6 +82,19 @@ export default function PasswordProtectionDialog({
               placeholder="Confirm password"
               placeholderTextColor={colors.icon}
               secureTextEntry={!showPw}
+              returnKeyType="next"
+            />
+          </View>
+
+          {/* Hint input */}
+          <View style={[styles.inputRow, { marginBottom: 0 }]}>
+            <Ionicons name="help-circle-outline" size={16} color={colors.icon} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.input}
+              value={hint}
+              onChangeText={setHint}
+              placeholder="Password hint (optional)"
+              placeholderTextColor={colors.icon}
               onSubmitEditing={handleSet}
               returnKeyType="done"
             />

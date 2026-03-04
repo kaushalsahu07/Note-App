@@ -20,6 +20,7 @@ export interface Note {
   pinned?: boolean;
   isPasswordProtected?: boolean;
   password?: string;
+  passwordHint?: string;
 }
 
 interface SavedPassword {
@@ -27,6 +28,8 @@ interface SavedPassword {
   title: string;
   password: string;
   date: string;
+  noteId?: string;
+  category?: string;
 }
 
 let notesChangeCallback: ((notes: Note[]) => void) | null = null;
@@ -75,6 +78,13 @@ export async function deleteNotes(ids: string[]): Promise<boolean> {
     const notes = await loadNotes();
     const updatedNotes = notes.filter(note => !ids.includes(note.id));
     await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    // Remove linked note passwords from the password manager
+    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
+    if (savedPasswords) {
+      const passwords: SavedPassword[] = JSON.parse(savedPasswords);
+      const filteredPasswords = passwords.filter(p => !p.noteId || !ids.includes(p.noteId));
+      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(filteredPasswords));
+    }
     console.log('Notes deleted:', ids);
     notesChangeCallback?.(updatedNotes);
     return true;
@@ -133,6 +143,46 @@ export async function savePasswordToManager(title: string, password: string) {
   } catch (error) {
     console.error('Error saving password:', error);
     return false;
+  }
+}
+
+export async function upsertNotePasswordInManager(
+  noteId: string,
+  noteTitle: string,
+  password: string
+): Promise<void> {
+  try {
+    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
+    let passwords: SavedPassword[] = savedPasswords ? JSON.parse(savedPasswords) : [];
+    const existing = passwords.findIndex(p => p.noteId === noteId);
+    if (existing !== -1) {
+      passwords[existing] = {
+        ...passwords[existing],
+        title: noteTitle,
+        password,
+        date: new Date().toLocaleDateString(),
+      };
+    } else {
+      passwords = [
+        { id: Date.now().toString(), title: noteTitle, password, date: new Date().toLocaleDateString(), noteId, category: 'Note' },
+        ...passwords,
+      ];
+    }
+    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+  } catch (error) {
+    console.error('Error upserting note password:', error);
+  }
+}
+
+export async function deleteNotePasswordFromManager(noteId: string): Promise<void> {
+  try {
+    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
+    if (!savedPasswords) return;
+    const passwords: SavedPassword[] = JSON.parse(savedPasswords);
+    const filtered = passwords.filter(p => p.noteId !== noteId);
+    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error deleting note password:', error);
   }
 }
 

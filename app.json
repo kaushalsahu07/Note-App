@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "Notes",
-    "slug": "note",
+    "slug": "notes-app",
     "version": "1.4.0",
-    "owner": "knxgamers-organization",
+    "owner": "kaushalsahu.07",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -35,7 +35,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "8bce6584-1a0c-4a3e-88c8-c206d2e597af"
+        "projectId": "Your Project ID"
       }
     }
   }

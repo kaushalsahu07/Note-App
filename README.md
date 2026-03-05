@@ -39,6 +39,7 @@ A modern, light & dark-themed notes & to-do app built with **Expo** (React Nativ
 npm install
 npx expo start --clear
 ```
+``` Change the project id & owner in app.json  ```
 
 Scan the QR code with **Expo Go** on your device, or press `a` for Android emulator / `i` for iOS simulator.
 

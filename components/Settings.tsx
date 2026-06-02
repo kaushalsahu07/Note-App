@@ -1,10 +1,16 @@
 import { CustomAlert as Alert } from './CustomAlert';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { createBackup, restoreFromBackup } from '../utils/backupRestore';
+import {
+  isE2EEEnabled, setupE2EE, disableE2EE, changeE2EEPassphrase,
+  verifyE2EEPassphrase, setSessionPassphrase, getSessionPassphrase,
+} from '../utils/storage';
 import PasswordManager from './PasswordManager';
+import E2EESetupDialog from './E2EESetupDialog';
+import ExportFormatDialog from './ExportFormatDialog';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
@@ -44,10 +50,99 @@ export default function Settings({ onClose }: { onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
+  // E2EE state
+  const [e2eeEnabled, setE2eeEnabled] = useState(false);
+  const [e2eeDialogVisible, setE2eeDialogVisible] = useState(false);
+  const [e2eeDialogMode, setE2eeDialogMode] = useState<'setup' | 'unlock' | 'change' | 'disable'>('setup');
+  const [exportDialogVisible, setExportDialogVisible] = useState(false);
+  const [restorePassphraseDialog, setRestorePassphraseDialog] = useState(false);
+
+  useEffect(() => {
+    checkE2EEStatus();
+  }, []);
+
+  const checkE2EEStatus = async () => {
+    const enabled = await isE2EEEnabled();
+    setE2eeEnabled(enabled);
+  };
+
+  // ─── E2EE handlers ─────────────────────────────────────────────────
+
+  const handleEnableE2EE = () => {
+    setE2eeDialogMode('setup');
+    setE2eeDialogVisible(true);
+  };
+
+  const handleDisableE2EE = () => {
+    setE2eeDialogMode('disable');
+    setE2eeDialogVisible(true);
+  };
+
+  const handleChangePassphrase = () => {
+    setE2eeDialogMode('change');
+    setE2eeDialogVisible(true);
+  };
+
+  const handleE2EESubmit = async (passphrase: string, newPassphrase?: string): Promise<boolean> => {
+    if (e2eeDialogMode === 'setup') {
+      const success = await setupE2EE(passphrase);
+      if (success) {
+        setE2eeEnabled(true);
+        setE2eeDialogVisible(false);
+        Alert.alert('🔒 E2EE Enabled', 'All your notes and passwords are now encrypted at rest.');
+      }
+      return success;
+    }
+
+    if (e2eeDialogMode === 'disable') {
+      const valid = await verifyE2EEPassphrase(passphrase);
+      if (!valid) return false;
+      const success = await disableE2EE(passphrase);
+      if (success) {
+        setE2eeEnabled(false);
+        setE2eeDialogVisible(false);
+        Alert.alert('🔓 E2EE Disabled', 'Encryption has been removed. Data is stored as plaintext.');
+      }
+      return success;
+    }
+
+    if (e2eeDialogMode === 'change' && newPassphrase) {
+      const success = await changeE2EEPassphrase(passphrase, newPassphrase);
+      if (success) {
+        setE2eeDialogVisible(false);
+        Alert.alert('✅ Passphrase Changed', 'Your encryption passphrase has been updated.');
+      }
+      return success;
+    }
+
+    return false;
+  };
+
+  // ─── Backup / Restore handlers ─────────────────────────────────────
+
   const handleBackup = async () => {
-    const success = await createBackup();
+    if (e2eeEnabled) {
+      // Show format choice dialog
+      setExportDialogVisible(true);
+    } else {
+      // No E2EE — just create plaintext backup
+      const success = await createBackup(false);
+      if (success) {
+        Alert.alert('Backup Created', 'Your data has been backed up successfully.');
+      }
+    }
+  };
+
+  const handleExportFormat = async (encrypted: boolean) => {
+    setExportDialogVisible(false);
+    const success = await createBackup(encrypted);
     if (success) {
-      Alert.alert('Backup Created', 'Your data has been backed up successfully.');
+      Alert.alert(
+        'Backup Created',
+        encrypted
+          ? 'Your encrypted backup has been created. You\'ll need your passphrase to restore it.'
+          : 'Your data has been backed up successfully.'
+      );
     }
   };
 
@@ -57,10 +152,23 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       {
         text: 'Restore', style: 'destructive',
         onPress: async () => {
-          await restoreFromBackup();
+          const result = await restoreFromBackup();
+          if (result === 'needs_passphrase') {
+            // Show passphrase dialog for encrypted backup
+            setRestorePassphraseDialog(true);
+          }
         }
       }
     ]);
+  };
+
+  const handleRestorePassphrase = async (passphrase: string): Promise<boolean> => {
+    const result = await restoreFromBackup(passphrase);
+    if (result === true) {
+      setRestorePassphraseDialog(false);
+      return true;
+    }
+    return false;
   };
 
   return (
@@ -107,6 +215,82 @@ export default function Settings({ onClose }: { onClose: () => void }) {
           <PasswordManager />
         </View>
 
+        {/* E2EE section */}
+        <Animated.View entering={FadeInDown.delay(130).duration(400)}>
+          <Text style={styles.sectionLabel}>🛡️  Encryption</Text>
+        </Animated.View>
+        <View style={styles.card}>
+          {/* Status indicator */}
+          <Animated.View entering={FadeInDown.delay(140).duration(400)}>
+            <View style={styles.e2eeStatusRow}>
+              <View style={[
+                styles.e2eeStatusIcon,
+                { backgroundColor: e2eeEnabled ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.12)' }
+              ]}>
+                <Ionicons
+                  name={e2eeEnabled ? 'shield-checkmark' : 'shield-outline'}
+                  size={20}
+                  color={e2eeEnabled ? '#34D399' : colors.icon}
+                />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>End-to-End Encryption</Text>
+                <Text style={[styles.rowDesc, e2eeEnabled && { color: '#34D399' }]}>
+                  {e2eeEnabled ? 'Active — data encrypted at rest' : 'Disabled — data stored as plaintext'}
+                </Text>
+              </View>
+              <View style={[
+                styles.e2eeStatusBadge,
+                { backgroundColor: e2eeEnabled ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.12)' }
+              ]}>
+                <Text style={[
+                  styles.e2eeStatusBadgeText,
+                  { color: e2eeEnabled ? '#34D399' : colors.danger }
+                ]}>
+                  {e2eeEnabled ? 'ON' : 'OFF'}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          <View style={styles.separator} />
+
+          {/* Enable/Disable toggle */}
+          {e2eeEnabled ? (
+            <>
+              <SettingRow
+                icon="key-outline"
+                iconColor="#FBBF24"
+                label="Change Passphrase"
+                description="Update your master passphrase"
+                onPress={handleChangePassphrase}
+                index={4}
+                colors={colors}
+              />
+              <View style={styles.separator} />
+              <SettingRow
+                icon="shield-outline"
+                iconColor={colors.danger}
+                label="Disable E2EE"
+                description="Decrypt and remove encryption"
+                onPress={handleDisableE2EE}
+                index={5}
+                colors={colors}
+              />
+            </>
+          ) : (
+            <SettingRow
+              icon="shield-checkmark"
+              iconColor="#34D399"
+              label="Enable E2EE"
+              description="Encrypt all notes & passwords"
+              onPress={handleEnableE2EE}
+              index={4}
+              colors={colors}
+            />
+          )}
+        </View>
+
         {/* Backup section */}
         <Animated.View entering={FadeInDown.delay(160).duration(400)}>
           <Text style={styles.sectionLabel}>☁️  Backup & Restore</Text>
@@ -116,7 +300,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             icon="cloud-upload-outline"
             iconColor={colors.accent}
             label="Create Backup"
-            description="Export your notes to a file"
+            description={e2eeEnabled ? 'Export notes (choose format)' : 'Export your notes to a file'}
             onPress={handleBackup}
             index={2}
             colors={colors}
@@ -148,6 +332,30 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         </Animated.View>
 
       </ScrollView>
+
+      {/* E2EE Dialog */}
+      <E2EESetupDialog
+        visible={e2eeDialogVisible}
+        mode={e2eeDialogMode}
+        onClose={() => setE2eeDialogVisible(false)}
+        onSubmit={handleE2EESubmit}
+      />
+
+      {/* Export Format Dialog */}
+      <ExportFormatDialog
+        visible={exportDialogVisible}
+        onClose={() => setExportDialogVisible(false)}
+        onSelectFormat={handleExportFormat}
+        title="Backup Format"
+      />
+
+      {/* Restore Passphrase Dialog (for encrypted backups) */}
+      <E2EESetupDialog
+        visible={restorePassphraseDialog}
+        mode="unlock"
+        onClose={() => setRestorePassphraseDialog(false)}
+        onSubmit={async (passphrase) => handleRestorePassphrase(passphrase)}
+      />
     </View>
   );
 }
@@ -239,6 +447,27 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
     themeToggleKnobDark: {
       backgroundColor: '#fff',
       alignSelf: 'flex-end',
+    },
+    // E2EE status row
+    e2eeStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      gap: 14,
+    },
+    e2eeStatusIcon: {
+      width: 42, height: 42, borderRadius: 14,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    e2eeStatusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    e2eeStatusBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.5,
     },
     aboutCard: {
       backgroundColor: colors.surfaceSolid,

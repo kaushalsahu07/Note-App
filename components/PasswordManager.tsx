@@ -8,6 +8,8 @@ import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isE2EEEnabled, getSessionPassphrase } from '../utils/storage';
+import { encrypt, decrypt, isEncryptedData } from '../utils/encryption';
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface SavedPassword {
@@ -102,14 +104,34 @@ export default function PasswordManager() {
     else { setIsVisible(true); loadPasswords(); }
   };
 
-  // ─── CRUD ────────────────────────────────────────────────────────
+  // ─── CRUD (E2EE-aware) ──────────────────────────────────────────
   const loadPasswords = async () => {
     const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
-    if (raw) setPasswords(JSON.parse(raw));
+    if (!raw) return;
+    if (isEncryptedData(raw)) {
+      const pw = getSessionPassphrase();
+      if (!pw) return;
+      try {
+        const decrypted = await decrypt(raw, pw);
+        setPasswords(JSON.parse(decrypted));
+      } catch {
+        console.error('Failed to decrypt passwords');
+      }
+    } else {
+      setPasswords(JSON.parse(raw));
+    }
   };
 
   const persist = async (list: SavedPassword[]) => {
-    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(list));
+    const json = JSON.stringify(list);
+    const enabled = await isE2EEEnabled();
+    const pw = getSessionPassphrase();
+    if (enabled && pw) {
+      const encrypted = await encrypt(json, pw);
+      await AsyncStorage.setItem(PASSWORDS_KEY, encrypted);
+    } else {
+      await AsyncStorage.setItem(PASSWORDS_KEY, json);
+    }
     setPasswords(list);
   };
 

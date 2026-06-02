@@ -1,7 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  encrypt, decrypt, encryptObject, decryptObject,
+  isEncryptedData, hashPassphrase, verifyPassphraseHash,
+  precomputeSessionKey, clearSessionKey,
+} from './encryption';
 
 const NOTES_KEY = '@notes_v1';
 const PASSWORDS_KEY = 'saved_passwords';
+const E2EE_ENABLED_KEY = '@e2ee_enabled';
+const E2EE_PASSPHRASE_HASH_KEY = '@e2ee_passphrase_hash';
 
 export interface TodoItem {
   id: string;
@@ -32,6 +39,215 @@ interface SavedPassword {
   category?: string;
 }
 
+// ─── Session key (in-memory only — never persisted) ──────────────────
+let _sessionPassphrase: string | null = null;
+
+export async function setSessionPassphrase(passphrase: string) {
+  _sessionPassphrase = passphrase;
+  // Pre-derive and cache the encryption key so all
+  // subsequent encrypt/decrypt calls are instant
+  await precomputeSessionKey(passphrase);
+}
+
+export function getSessionPassphrase(): string | null {
+  return _sessionPassphrase;
+}
+
+export function clearSessionPassphrase() {
+  _sessionPassphrase = null;
+  clearSessionKey();
+}
+
+// ─── E2EE status helpers ─────────────────────────────────────────────
+
+export async function isE2EEEnabled(): Promise<boolean> {
+  const val = await AsyncStorage.getItem(E2EE_ENABLED_KEY);
+  return val === 'true';
+}
+
+export async function verifyE2EEPassphrase(passphrase: string): Promise<boolean> {
+  const storedHash = await AsyncStorage.getItem(E2EE_PASSPHRASE_HASH_KEY);
+  if (!storedHash) return false;
+  return verifyPassphraseHash(passphrase, storedHash);
+}
+
+/**
+ * Enable E2EE: store passphrase hash, encrypt all existing data.
+ */
+export async function setupE2EE(passphrase: string): Promise<boolean> {
+  try {
+    // Pre-cache key first so encrypt calls are fast
+    await precomputeSessionKey(passphrase);
+
+    // Store passphrase hash for future verification
+    const hash = await hashPassphrase(passphrase);
+    await AsyncStorage.setItem(E2EE_PASSPHRASE_HASH_KEY, hash);
+
+    // Encrypt existing notes
+    const notesJson = await AsyncStorage.getItem(NOTES_KEY);
+    if (notesJson) {
+      const encrypted = await encrypt(notesJson, passphrase);
+      await AsyncStorage.setItem(NOTES_KEY, encrypted);
+    }
+
+    // Encrypt existing passwords
+    const passwordsJson = await AsyncStorage.getItem(PASSWORDS_KEY);
+    if (passwordsJson) {
+      const encrypted = await encrypt(passwordsJson, passphrase);
+      await AsyncStorage.setItem(PASSWORDS_KEY, encrypted);
+    }
+
+    await AsyncStorage.setItem(E2EE_ENABLED_KEY, 'true');
+    _sessionPassphrase = passphrase;
+    return true;
+  } catch (error) {
+    console.error('Failed to setup E2EE:', error);
+    return false;
+  }
+}
+
+/**
+ * Disable E2EE: decrypt all data, remove E2EE keys.
+ */
+export async function disableE2EE(passphrase: string): Promise<boolean> {
+  try {
+    // Decrypt notes
+    const notesRaw = await AsyncStorage.getItem(NOTES_KEY);
+    if (notesRaw && isEncryptedData(notesRaw)) {
+      const decrypted = await decrypt(notesRaw, passphrase);
+      await AsyncStorage.setItem(NOTES_KEY, decrypted);
+    }
+
+    // Decrypt passwords
+    const passwordsRaw = await AsyncStorage.getItem(PASSWORDS_KEY);
+    if (passwordsRaw && isEncryptedData(passwordsRaw)) {
+      const decrypted = await decrypt(passwordsRaw, passphrase);
+      await AsyncStorage.setItem(PASSWORDS_KEY, decrypted);
+    }
+
+    await AsyncStorage.removeItem(E2EE_ENABLED_KEY);
+    await AsyncStorage.removeItem(E2EE_PASSPHRASE_HASH_KEY);
+    _sessionPassphrase = null;
+    clearSessionKey();
+    return true;
+  } catch (error) {
+    console.error('Failed to disable E2EE:', error);
+    return false;
+  }
+}
+
+/**
+ * Change passphrase: decrypt with old, re-encrypt with new.
+ */
+export async function changeE2EEPassphrase(
+  oldPassphrase: string,
+  newPassphrase: string
+): Promise<boolean> {
+  try {
+    // Verify old passphrase
+    const valid = await verifyE2EEPassphrase(oldPassphrase);
+    if (!valid) return false;
+
+    // Decrypt notes with old passphrase
+    const notesRaw = await AsyncStorage.getItem(NOTES_KEY);
+    let notesPlain: string | null = null;
+    if (notesRaw && isEncryptedData(notesRaw)) {
+      notesPlain = await decrypt(notesRaw, oldPassphrase);
+    } else {
+      notesPlain = notesRaw;
+    }
+
+    // Decrypt passwords with old passphrase
+    const passwordsRaw = await AsyncStorage.getItem(PASSWORDS_KEY);
+    let passwordsPlain: string | null = null;
+    if (passwordsRaw && isEncryptedData(passwordsRaw)) {
+      passwordsPlain = await decrypt(passwordsRaw, oldPassphrase);
+    } else {
+      passwordsPlain = passwordsRaw;
+    }
+
+    // Re-encrypt with new passphrase
+    if (notesPlain) {
+      const encrypted = await encrypt(notesPlain, newPassphrase);
+      await AsyncStorage.setItem(NOTES_KEY, encrypted);
+    }
+    if (passwordsPlain) {
+      const encrypted = await encrypt(passwordsPlain, newPassphrase);
+      await AsyncStorage.setItem(PASSWORDS_KEY, encrypted);
+    }
+
+    // Update stored hash
+    const newHash = await hashPassphrase(newPassphrase);
+    await AsyncStorage.setItem(E2EE_PASSPHRASE_HASH_KEY, newHash);
+    _sessionPassphrase = newPassphrase;
+    await precomputeSessionKey(newPassphrase);
+    return true;
+  } catch (error) {
+    console.error('Failed to change passphrase:', error);
+    return false;
+  }
+}
+
+// ─── Internal: load/save with encryption awareness ───────────────────
+
+async function loadRawNotes(): Promise<Note[]> {
+  const raw = await AsyncStorage.getItem(NOTES_KEY);
+  if (!raw) return [];
+
+  if (isEncryptedData(raw)) {
+    if (!_sessionPassphrase) {
+      console.warn('E2EE enabled but no session passphrase — returning empty');
+      return [];
+    }
+    const decrypted = await decrypt(raw, _sessionPassphrase);
+    return JSON.parse(decrypted);
+  }
+
+  return JSON.parse(raw);
+}
+
+async function saveRawNotes(notes: Note[]): Promise<void> {
+  const json = JSON.stringify(notes);
+  const enabled = await isE2EEEnabled();
+
+  if (enabled && _sessionPassphrase) {
+    const encrypted = await encrypt(json, _sessionPassphrase);
+    await AsyncStorage.setItem(NOTES_KEY, encrypted);
+  } else {
+    await AsyncStorage.setItem(NOTES_KEY, json);
+  }
+}
+
+async function loadRawPasswords(): Promise<SavedPassword[]> {
+  const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
+  if (!raw) return [];
+
+  if (isEncryptedData(raw)) {
+    if (!_sessionPassphrase) {
+      console.warn('E2EE enabled but no session passphrase — returning empty');
+      return [];
+    }
+    const decrypted = await decrypt(raw, _sessionPassphrase);
+    return JSON.parse(decrypted);
+  }
+
+  return JSON.parse(raw);
+}
+
+async function saveRawPasswords(passwords: SavedPassword[]): Promise<void> {
+  const json = JSON.stringify(passwords);
+  const enabled = await isE2EEEnabled();
+
+  if (enabled && _sessionPassphrase) {
+    const encrypted = await encrypt(json, _sessionPassphrase);
+    await AsyncStorage.setItem(PASSWORDS_KEY, encrypted);
+  } else {
+    await AsyncStorage.setItem(PASSWORDS_KEY, json);
+  }
+}
+
+// ─── Notes change listener ───────────────────────────────────────────
+
 let notesChangeCallback: ((notes: Note[]) => void) | null = null;
 
 export function setNotesChangeListener(callback: (notes: Note[]) => void) {
@@ -42,11 +258,26 @@ export function removeNotesChangeListener() {
   notesChangeCallback = null;
 }
 
+/**
+ * Reload notes from storage and notify the UI.
+ * Used after backup restore to trigger auto-refresh.
+ */
+export async function notifyNotesChanged(): Promise<void> {
+  try {
+    const notes = await loadRawNotes();
+    notesChangeCallback?.(notes);
+  } catch (error) {
+    console.error('Error notifying notes changed:', error);
+  }
+}
+
+// ─── Public CRUD (unchanged API, now E2EE-aware internally) ──────────
+
 export async function saveNote(note: Note) {
   try {
     const existingNotes = await loadNotes();
     const updatedNotes = [note, ...existingNotes];
-    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    await saveRawNotes(updatedNotes);
     console.log('Note saved successfully:', note);
     notesChangeCallback?.(updatedNotes);
     return true;
@@ -58,8 +289,7 @@ export async function saveNote(note: Note) {
 
 export async function loadNotes(): Promise<Note[]> {
   try {
-    const notesJson = await AsyncStorage.getItem(NOTES_KEY);
-    const notes = notesJson ? JSON.parse(notesJson) : [];
+    const notes = await loadRawNotes();
     console.log('Notes loaded:', notes.length);
     return notes;
   } catch (error) {
@@ -77,13 +307,12 @@ export async function deleteNotes(ids: string[]): Promise<boolean> {
     if (ids.length === 0) return true;
     const notes = await loadNotes();
     const updatedNotes = notes.filter(note => !ids.includes(note.id));
-    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    await saveRawNotes(updatedNotes);
     // Remove linked note passwords from the password manager
-    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
-    if (savedPasswords) {
-      const passwords: SavedPassword[] = JSON.parse(savedPasswords);
+    const passwords = await loadRawPasswords();
+    if (passwords.length > 0) {
       const filteredPasswords = passwords.filter(p => !p.noteId || !ids.includes(p.noteId));
-      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(filteredPasswords));
+      await saveRawPasswords(filteredPasswords);
     }
     console.log('Notes deleted:', ids);
     notesChangeCallback?.(updatedNotes);
@@ -100,7 +329,7 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
     const updatedNotes = notes.map(note =>
       note.id === updatedNote.id ? updatedNote : note
     );
-    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    await saveRawNotes(updatedNotes);
     console.log('Note updated:', updatedNote.id);
     notesChangeCallback?.(updatedNotes);
     return true;
@@ -116,7 +345,7 @@ export async function togglePinNote(id: string): Promise<boolean> {
     const updatedNotes = notes.map(note =>
       note.id === id ? { ...note, pinned: !note.pinned } : note
     );
-    await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+    await saveRawNotes(updatedNotes);
     notesChangeCallback?.(updatedNotes);
     return true;
   } catch (error) {
@@ -127,8 +356,7 @@ export async function togglePinNote(id: string): Promise<boolean> {
 
 export async function savePasswordToManager(title: string, password: string) {
   try {
-    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
-    let passwords: SavedPassword[] = savedPasswords ? JSON.parse(savedPasswords) : [];
+    let passwords = await loadRawPasswords();
 
     const newPassword: SavedPassword = {
       id: Date.now().toString(),
@@ -138,7 +366,7 @@ export async function savePasswordToManager(title: string, password: string) {
     };
 
     passwords = [newPassword, ...passwords];
-    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+    await saveRawPasswords(passwords);
     return true;
   } catch (error) {
     console.error('Error saving password:', error);
@@ -152,8 +380,7 @@ export async function upsertNotePasswordInManager(
   password: string
 ): Promise<void> {
   try {
-    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
-    let passwords: SavedPassword[] = savedPasswords ? JSON.parse(savedPasswords) : [];
+    let passwords = await loadRawPasswords();
     const existing = passwords.findIndex(p => p.noteId === noteId);
     if (existing !== -1) {
       passwords[existing] = {
@@ -168,7 +395,7 @@ export async function upsertNotePasswordInManager(
         ...passwords,
       ];
     }
-    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+    await saveRawPasswords(passwords);
   } catch (error) {
     console.error('Error upserting note password:', error);
   }
@@ -176,13 +403,11 @@ export async function upsertNotePasswordInManager(
 
 export async function deleteNotePasswordFromManager(noteId: string): Promise<void> {
   try {
-    const savedPasswords = await AsyncStorage.getItem(PASSWORDS_KEY);
-    if (!savedPasswords) return;
-    const passwords: SavedPassword[] = JSON.parse(savedPasswords);
+    const passwords = await loadRawPasswords();
+    if (passwords.length === 0) return;
     const filtered = passwords.filter(p => p.noteId !== noteId);
-    await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(filtered));
+    await saveRawPasswords(filtered);
   } catch (error) {
     console.error('Error deleting note password:', error);
   }
 }
-

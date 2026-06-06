@@ -278,6 +278,10 @@ app.delete('/api/sync/delete', authMiddleware, async (req, res) => {
 
 // ─── Health check ────────────────────────────────────────────────────
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'Note App Sync Server' });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

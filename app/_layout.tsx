@@ -9,6 +9,7 @@ import {
   isE2EEEnabled, verifyE2EEPassphrase, setSessionPassphrase,
   notifyNotesChanged,
 } from '../utils/storage';
+import { startAutoSync } from '../utils/cloudSync';
 
 function AppStack() {
   const { colors, isDark } = useTheme();
@@ -27,6 +28,8 @@ function AppStack() {
       setIsLocked(false);
     } finally {
       setCheckingE2EE(false);
+      // Start auto-sync listener (runs in background)
+      startAutoSync();
     }
   };
 

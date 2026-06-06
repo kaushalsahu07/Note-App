@@ -24,10 +24,12 @@
         "WRITE_EXTERNAL_STORAGE",
         "READ_EXTERNAL_STORAGE"
       ],
-      "package": "com.kaushal.notesapp"
+      "package": "com.kaushal.notesapp",
+      "usesCleartextTraffic": true
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store"
     ],
     "scheme": "my-notes-app",
     "extra": {

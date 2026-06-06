@@ -11,11 +11,14 @@ import {
 import PasswordManager from './PasswordManager';
 import E2EESetupDialog from './E2EESetupDialog';
 import ExportFormatDialog from './ExportFormatDialog';
+import CloudSyncDialog from './CloudSyncDialog';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isLoggedIn, getLastSyncTime, isAutoSyncEnabled } from '../utils/syncConfig';
+import { getNextSyncInfo } from '../utils/cloudSync';
 
 interface SettingRowProps {
   icon: string;
@@ -57,13 +60,59 @@ export default function Settings({ onClose }: { onClose: () => void }) {
   const [exportDialogVisible, setExportDialogVisible] = useState(false);
   const [restorePassphraseDialog, setRestorePassphraseDialog] = useState(false);
 
+  // Cloud Sync state
+  const [cloudSyncDialogVisible, setCloudSyncDialogVisible] = useState(false);
+  const [syncLoggedIn, setSyncLoggedIn] = useState(false);
+  const [syncStatusText, setSyncStatusText] = useState('Not set up');
+  const [autoSyncText, setAutoSyncText] = useState('');
+
   useEffect(() => {
     checkE2EEStatus();
+    loadSyncStatus();
   }, []);
 
   const checkE2EEStatus = async () => {
     const enabled = await isE2EEEnabled();
     setE2eeEnabled(enabled);
+  };
+
+  const loadSyncStatus = async () => {
+    try {
+      const loggedIn = await isLoggedIn();
+      setSyncLoggedIn(loggedIn);
+      if (loggedIn) {
+        const lastSync = await getLastSyncTime();
+        if (lastSync) {
+          const d = new Date(lastSync);
+          const now = new Date();
+          const diffMs = now.getTime() - d.getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          if (diffMins < 1) setSyncStatusText('Synced just now');
+          else if (diffMins < 60) setSyncStatusText(`Synced ${diffMins}m ago`);
+          else {
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) setSyncStatusText(`Synced ${diffHours}h ago`);
+            else setSyncStatusText(`Synced ${Math.floor(diffHours / 24)}d ago`);
+          }
+        } else {
+          setSyncStatusText('Not synced yet');
+        }
+
+        const autoEnabled = await isAutoSyncEnabled();
+        if (autoEnabled) {
+          const nextSync = await getNextSyncInfo();
+          if (nextSync) {
+            setAutoSyncText(`Auto-sync in ${nextSync.hoursLeft}h ${nextSync.minutesLeft}m`);
+          } else {
+            setAutoSyncText('Auto-sync enabled');
+          }
+        }
+      } else {
+        setSyncStatusText('Not set up');
+      }
+    } catch {
+      setSyncStatusText('Not set up');
+    }
   };
 
   // ─── E2EE handlers ─────────────────────────────────────────────────
@@ -291,9 +340,42 @@ export default function Settings({ onClose }: { onClose: () => void }) {
           )}
         </View>
 
+        {/* Cloud Sync section */}
+        <Animated.View entering={FadeInDown.delay(155).duration(400)}>
+          <Text style={styles.sectionLabel}>☁️  Cloud Sync</Text>
+        </Animated.View>
+        <View style={styles.card}>
+          <SettingRow
+            icon="cloud-outline"
+            iconColor="#38BDF8"
+            label="Cloud Sync"
+            description={syncLoggedIn ? syncStatusText : 'Sign in to sync your data'}
+            onPress={() => setCloudSyncDialogVisible(true)}
+            index={6}
+            colors={colors}
+          />
+          {syncLoggedIn && autoSyncText ? (
+            <>
+              <View style={styles.separator} />
+              <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.autoSyncInfo}>
+                <View style={[styles.rowIcon, { backgroundColor: 'rgba(52,211,153,0.12)' }]}>
+                  <Ionicons name="sync-circle" size={20} color="#34D399" />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>Auto-Sync</Text>
+                  <Text style={styles.rowDesc}>{autoSyncText}</Text>
+                </View>
+                <View style={[styles.e2eeStatusBadge, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
+                  <Text style={[styles.e2eeStatusBadgeText, { color: '#34D399' }]}>ON</Text>
+                </View>
+              </Animated.View>
+            </>
+          ) : null}
+        </View>
+
         {/* Backup section */}
-        <Animated.View entering={FadeInDown.delay(160).duration(400)}>
-          <Text style={styles.sectionLabel}>☁️  Backup & Restore</Text>
+        <Animated.View entering={FadeInDown.delay(190).duration(400)}>
+          <Text style={styles.sectionLabel}>💾  Backup & Restore</Text>
         </Animated.View>
         <View style={styles.card}>
           <SettingRow
@@ -302,7 +384,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             label="Create Backup"
             description={e2eeEnabled ? 'Export notes (choose format)' : 'Export your notes to a file'}
             onPress={handleBackup}
-            index={2}
+            index={7}
             colors={colors}
           />
           <View style={styles.separator} />
@@ -312,7 +394,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             label="Restore Data"
             description="Import notes from a backup file"
             onPress={handleRestore}
-            index={3}
+            index={8}
             colors={colors}
           />
         </View>
@@ -347,6 +429,15 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         onClose={() => setExportDialogVisible(false)}
         onSelectFormat={handleExportFormat}
         title="Backup Format"
+      />
+
+      {/* Cloud Sync Dialog */}
+      <CloudSyncDialog
+        visible={cloudSyncDialogVisible}
+        onClose={() => {
+          setCloudSyncDialogVisible(false);
+          loadSyncStatus(); // Refresh sync status when dialog closes
+        }}
       />
 
       {/* Restore Passphrase Dialog (for encrypted backups) */}
@@ -425,6 +516,12 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
     rowContent: { flex: 1 },
     rowLabel: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
     rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2 },
+    autoSyncInfo: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      padding: 16,
+      gap: 14,
+    },
     separator: {
       height: 1, backgroundColor: colors.border,
       marginLeft: 72,

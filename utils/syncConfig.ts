@@ -10,9 +10,7 @@ const SYNC_AUTO_ENABLED_KEY = '@sync_auto_enabled';
 const SYNC_PASSWORD_KEY = 'sync_session_password'; // stored in SecureStore
 
 // ─── Default API URL ─────────────────────────────────────────────────
-// Change this to your Railway deployment URL after deploying
-// For local dev, use your computer's IP (not localhost — phone can't reach localhost)
-const DEFAULT_API_URL = 'http://192.168.0.100:3001';
+const DEFAULT_API_URL = 'Your Server URL or use your computer IP address';
 
 // ─── Session password (cached in-memory, persisted in SecureStore) ───
 let _sessionPassword: string | null = null;

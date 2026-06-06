@@ -10,7 +10,8 @@ A modern, light & dark-themed notes & to-do app built with **Expo** (React Nativ
 - **📝 Versatile Notes**: Create text notes with custom background colors and quick-edit support.
 - **✅ Interactive To-Dos**: Efficient task management with a dedicated list editor and progress tracking.
 - **🔐 Privacy & Security**: 
-  - **100% Offline & Private**: All your notes and data are stored locally on your device. We have **no cloud storage**, so your data never leaves your phone.
+  - **Offline-First**: All your notes and data are stored locally on your device by default. 
+  - **☁️ Optional Cloud Sync**: Self-hostable cloud sync server. Your data is encrypted *before* leaving your device (E2EE), ensuring complete privacy even when synced.
   - **🛡️ End-to-End Encryption (E2EE)**: Optional AES-256 encryption at rest — all notes, to-do lists, and saved passwords are encrypted with a master passphrase that only you know.
   - **Note Locking**: Secure individual sensitive notes with individual password protection.
   - **Password Manager**: An integrated, secure tool for managing your credentials locally.
@@ -30,20 +31,35 @@ A modern, light & dark-themed notes & to-do app built with **Expo** (React Nativ
 | Icons | [@expo/vector-icons](https://icons.expo.fyi/) (Ionicons) |
 | Storage | AsyncStorage via `utils/storage.ts` |
 | Encryption | AES-256 CTR + HMAC-SHA-256 via `expo-crypto` (`utils/encryption.ts`) |
-| Language | TypeScript |
+| Language | TypeScript & Node.js |
+| Sync Server | Express.js, MongoDB |
 
 
 ---
 
 ## Getting Started
 
+### 📱 Running the App
+
 ```bash
 npm install
 npx expo start --clear
 ```
-``` Change the project id & owner in app.json  ```
+> Note: Change the `projectId` & `owner` in `app.json`.
 
 Scan the QR code with **Expo Go** on your device, or press `a` for Android emulator / `i` for iOS simulator.
+
+### ☁️ Running the Sync Server (Optional)
+
+If you want to use the Cloud Sync feature:
+
+```bash
+cd server
+npm install
+# Create a .env file based on .env.example and configure your MongoDB URI
+npm start
+```
+> Note: Update the `DEFAULT_API_URL` in `utils/syncConfig.ts` to point to your server (e.g., your computer's IP address or a deployed URL).
 
 ---
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Notes",
     "slug": "notes-app",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "owner": "kaushalsahu.07",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

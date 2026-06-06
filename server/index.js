@@ -285,7 +285,7 @@ app.get('/api/health', (req, res) => {
 // ─── Start server ────────────────────────────────────────────────────
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Note App Sync Server running on port ${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/api/health`);
   });

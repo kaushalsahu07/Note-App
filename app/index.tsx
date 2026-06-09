@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, togglePinNote, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener } from '../utils/storage';
+import { loadNotes, togglePinNote, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener, archiveNotes } from '../utils/storage';
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -151,6 +151,12 @@ export default function NotesScreen() {
     );
   };
 
+  const handleArchiveSelected = async () => {
+    await archiveNotes(selectedIds);
+    clearSelection();
+    loadStoredNotes();
+  };
+
   const filteredNotes = notes
     .filter(note => {
       const q = searchQuery.toLowerCase();
@@ -181,9 +187,14 @@ export default function NotesScreen() {
               <Text style={styles.greetingName}>{username || 'Friend'}</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(true)} activeOpacity={0.85}>
-            <Ionicons name="settings-outline" size={22} color={colors.icon} />
-          </TouchableOpacity>
+          <View style={styles.headerBtns}>
+            <TouchableOpacity style={styles.archiveHeaderBtn} onPress={() => router.push('/archive')} activeOpacity={0.85}>
+              <Ionicons name="archive-outline" size={20} color={colors.icon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(true)} activeOpacity={0.85}>
+              <Ionicons name="settings-outline" size={22} color={colors.icon} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats pill */}
@@ -266,14 +277,20 @@ export default function NotesScreen() {
       {/* Selection action bar */}
       {isSelectionMode && (
         <Animated.View entering={FadeInDown.duration(300)} exiting={FadeOutDown.duration(200)} style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBarCancel} onPress={clearSelection}>
-            <Ionicons name="close" size={20} color={colors.icon} />
-          </TouchableOpacity>
+          {/* Top row: close + count */}
+          <View style={styles.actionBarTopRow}>
+            <TouchableOpacity style={styles.actionBarCancel} onPress={clearSelection}>
+              <Ionicons name="close" size={20} color={colors.icon} />
+            </TouchableOpacity>
+            <View style={styles.actionBarCountWrap}>
+              <View style={styles.actionBarCountBadge}>
+                <Text style={styles.actionBarCountNum}>{selectedIds.length}</Text>
+              </View>
+              <Text style={styles.actionBarCountLabel}>selected</Text>
+            </View>
+          </View>
 
-          <Text style={styles.actionBarCount}>
-            {selectedIds.length} selected
-          </Text>
-
+          {/* Bottom row: action buttons */}
           <View style={styles.actionBarBtns}>
             <TouchableOpacity
               style={[
@@ -291,7 +308,16 @@ export default function NotesScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBarBtn, { backgroundColor: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.3)' }]}
+              style={[styles.actionBarBtn, { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.3)' }]}
+              onPress={handleArchiveSelected}
+              disabled={selectedIds.length === 0}
+            >
+              <Ionicons name="archive" size={16} color="#FBBF24" />
+              <Text style={[styles.actionBarBtnText, { color: '#FBBF24' }]}>Archive</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBarBtn, { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.3)' }]}
               onPress={handleDeleteSelected}
               disabled={selectedIds.length === 0}
             >
@@ -382,6 +408,22 @@ function makeStyles(colors: ThemeColors) {
       color: colors.text,
       letterSpacing: -1.2,
     },
+    headerBtns: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 4,
+    },
+    archiveHeaderBtn: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: colors.surfaceSolid,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     settingsBtn: {
       width: 46,
       height: 46,
@@ -391,7 +433,6 @@ function makeStyles(colors: ThemeColors) {
       borderColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 4,
     },
     statsPill: {
       flexDirection: 'row',
@@ -582,14 +623,17 @@ function makeStyles(colors: ThemeColors) {
       bottom: 0,
       left: 0,
       right: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingTop: 14,
       paddingBottom: 32,
       backgroundColor: colors.surfaceSolid,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+      gap: 12,
+    },
+    actionBarTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 12,
     },
     actionBarCancel: {
@@ -602,12 +646,32 @@ function makeStyles(colors: ThemeColors) {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    actionBarCount: {
+    actionBarCountWrap: {
       flex: 1,
-      color: colors.text,
-      fontSize: 15,
-      fontWeight: '700',
-      letterSpacing: -0.3,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    actionBarCountBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: `${colors.accent}20`,
+      borderWidth: 1,
+      borderColor: `${colors.accent}40`,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionBarCountNum: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: colors.accent,
+    },
+    actionBarCountLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.icon,
+      letterSpacing: -0.2,
     },
     actionBarBtns: {
       flexDirection: 'row',

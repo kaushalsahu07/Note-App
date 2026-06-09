@@ -2,7 +2,7 @@ import { CustomAlert as Alert } from '../../components/CustomAlert';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { loadNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager } from '../../utils/storage';
+import { loadAllNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager, archiveNotes, unarchiveNotes } from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 import PasswordProtectionDialog from '../../components/PasswordProtectionDialog';
@@ -53,7 +53,7 @@ export default function NoteViewScreen() {
 
   const loadNoteData = async () => {
     try {
-      const notes = await loadNotes();
+      const notes = await loadAllNotes();
       const note = notes.find(n => n.id === id);
       if (note) {
         if (note.isPasswordProtected) {
@@ -170,6 +170,44 @@ export default function NoteViewScreen() {
     }
   };
 
+  const isArchived = originalNote?.archived === true;
+
+  const handleArchiveToggle = () => {
+    if (isArchived) {
+      Alert.alert(
+        'Unarchive Note',
+        'This note will be restored to your main notes.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unarchive',
+            onPress: async () => {
+              if (!id) return;
+              await unarchiveNotes([id]);
+              router.back();
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Archive Note',
+        'This note will be moved to your archive. You can restore it anytime.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Archive',
+            onPress: async () => {
+              if (!id) return;
+              await archiveNotes([id]);
+              router.back();
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const handleBack = () => {
     // If content is focused, just unfocus and show title/meta again
     if (isContentFocused) {
@@ -231,6 +269,13 @@ export default function NoteViewScreen() {
         <View style={styles.headerRight}>
           {!isContentFocused && (
             <>
+              <TouchableOpacity style={styles.iconBtn} onPress={handleArchiveToggle} activeOpacity={0.8}>
+                <Ionicons
+                  name={isArchived ? 'arrow-undo-outline' : 'archive-outline'}
+                  size={18}
+                  color={isArchived ? colors.accentSecondary : colors.icon}
+                />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn} onPress={handleLockPress} activeOpacity={0.8}>
                 <Ionicons
                   name={originalNote?.isPasswordProtected ? 'lock-closed' : 'lock-open-outline'}

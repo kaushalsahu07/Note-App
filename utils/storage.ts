@@ -25,6 +25,7 @@ export interface Note {
   lastModified: string;
   tasks?: TodoItem[];
   pinned?: boolean;
+  archived?: boolean;
   isPasswordProtected?: boolean;
   password?: string;
   passwordHint?: string;
@@ -275,11 +276,11 @@ export async function notifyNotesChanged(): Promise<void> {
 
 export async function saveNote(note: Note) {
   try {
-    const existingNotes = await loadNotes();
+    const existingNotes = await loadRawNotes();
     const updatedNotes = [note, ...existingNotes];
     await saveRawNotes(updatedNotes);
     console.log('Note saved successfully:', note);
-    notesChangeCallback?.(updatedNotes);
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
     return true;
   } catch (error) {
     console.error('Error saving note:', error);
@@ -290,10 +291,26 @@ export async function saveNote(note: Note) {
 export async function loadNotes(): Promise<Note[]> {
   try {
     const notes = await loadRawNotes();
-    console.log('Notes loaded:', notes.length);
-    return notes;
+    // Filter out archived notes from the main view
+    const activeNotes = notes.filter(n => !n.archived);
+    console.log('Notes loaded:', activeNotes.length);
+    return activeNotes;
   } catch (error) {
     console.error('Error loading notes:', error);
+    return [];
+  }
+}
+
+/**
+ * Load ALL notes including archived ones.
+ * Used by detail screens that need to find a note by ID regardless of archive status.
+ */
+export async function loadAllNotes(): Promise<Note[]> {
+  try {
+    const notes = await loadRawNotes();
+    return notes;
+  } catch (error) {
+    console.error('Error loading all notes:', error);
     return [];
   }
 }
@@ -305,7 +322,7 @@ export async function deleteNote(id: string): Promise<boolean> {
 export async function deleteNotes(ids: string[]): Promise<boolean> {
   try {
     if (ids.length === 0) return true;
-    const notes = await loadNotes();
+    const notes = await loadRawNotes();
     const updatedNotes = notes.filter(note => !ids.includes(note.id));
     await saveRawNotes(updatedNotes);
     // Remove linked note passwords from the password manager
@@ -315,7 +332,7 @@ export async function deleteNotes(ids: string[]): Promise<boolean> {
       await saveRawPasswords(filteredPasswords);
     }
     console.log('Notes deleted:', ids);
-    notesChangeCallback?.(updatedNotes);
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
     return true;
   } catch (error) {
     console.error('Error deleting notes:', error);
@@ -325,13 +342,13 @@ export async function deleteNotes(ids: string[]): Promise<boolean> {
 
 export async function updateNote(updatedNote: Note): Promise<boolean> {
   try {
-    const notes = await loadNotes();
+    const notes = await loadRawNotes();
     const updatedNotes = notes.map(note =>
       note.id === updatedNote.id ? updatedNote : note
     );
     await saveRawNotes(updatedNotes);
     console.log('Note updated:', updatedNote.id);
-    notesChangeCallback?.(updatedNotes);
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
     return true;
   } catch (error) {
     console.error('Error updating note:', error);
@@ -341,16 +358,69 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
 
 export async function togglePinNote(id: string): Promise<boolean> {
   try {
-    const notes = await loadNotes();
+    const notes = await loadRawNotes();
     const updatedNotes = notes.map(note =>
       note.id === id ? { ...note, pinned: !note.pinned } : note
     );
     await saveRawNotes(updatedNotes);
-    notesChangeCallback?.(updatedNotes);
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
     return true;
   } catch (error) {
     console.error('Error toggling pin:', error);
     return false;
+  }
+}
+
+// ─── Archive helpers ─────────────────────────────────────────────────
+
+export async function archiveNotes(ids: string[]): Promise<boolean> {
+  try {
+    if (ids.length === 0) return true;
+    const notes = await loadRawNotes();
+    const updatedNotes = notes.map(note =>
+      ids.includes(note.id)
+        ? { ...note, archived: true, pinned: false, lastModified: new Date().toISOString() }
+        : note
+    );
+    await saveRawNotes(updatedNotes);
+    console.log('Notes archived:', ids);
+    // Notify with only active notes
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
+    return true;
+  } catch (error) {
+    console.error('Error archiving notes:', error);
+    return false;
+  }
+}
+
+export async function unarchiveNotes(ids: string[]): Promise<boolean> {
+  try {
+    if (ids.length === 0) return true;
+    const notes = await loadRawNotes();
+    const updatedNotes = notes.map(note =>
+      ids.includes(note.id)
+        ? { ...note, archived: false, lastModified: new Date().toISOString() }
+        : note
+    );
+    await saveRawNotes(updatedNotes);
+    console.log('Notes unarchived:', ids);
+    notesChangeCallback?.(updatedNotes.filter(n => !n.archived));
+    return true;
+  } catch (error) {
+    console.error('Error unarchiving notes:', error);
+    return false;
+  }
+}
+
+export async function loadArchivedNotes(): Promise<Note[]> {
+  try {
+    const notes = await loadRawNotes();
+    const archived = notes.filter(n => n.archived === true);
+    console.log('Archived notes loaded:', archived.length);
+    return archived;
+  } catch (error) {
+    console.error('Error loading archived notes:', error);
+    return [];
   }
 }
 

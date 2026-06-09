@@ -80,6 +80,12 @@ function AppStack() {
           options={{ presentation: 'modal' }}
         />
 
+        {/* Archive screen */}
+        <Stack.Screen
+          name="archive"
+          options={{ presentation: 'modal' }}
+        />
+
         {/* View / read a note */}
         <Stack.Screen
           name="note/[id]"

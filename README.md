@@ -9,9 +9,10 @@ A modern, light & dark-themed notes & to-do app built with **Expo** (React Nativ
 - **🌓 Dynamic Theming**: Toggle between Dark and Light modes with a premium glassmorphic interface.
 - **📝 Versatile Notes**: Create text notes with custom background colors and quick-edit support.
 - **✅ Interactive To-Dos**: Efficient task management with a dedicated list editor and progress tracking.
+- **📦 Archive**: Declutter your workspace by archiving notes you don't need right now. Archived notes are preserved separately and can be restored anytime — from the home screen (multi-select) or within a note's detail view.
 - **🔐 Privacy & Security**: 
   - **Offline-First**: All your notes and data are stored locally on your device by default. 
-  - **☁️ Optional Cloud Sync**: Self-hostable cloud sync server. Your data is encrypted *before* leaving your device (E2EE), ensuring complete privacy even when synced.
+  - **☁️ Optional Cloud Sync**: Self-hostable cloud sync server. Your data is encrypted *before* leaving your device (E2EE), ensuring complete privacy even when synced. Archived notes are included in cloud sync.
   - **🛡️ End-to-End Encryption (E2EE)**: Optional AES-256 encryption at rest — all notes, to-do lists, and saved passwords are encrypted with a master passphrase that only you know.
   - **Note Locking**: Secure individual sensitive notes with individual password protection.
   - **Password Manager**: An integrated, secure tool for managing your credentials locally.

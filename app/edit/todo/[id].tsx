@@ -2,7 +2,7 @@ import { CustomAlert as Alert } from '../../../components/CustomAlert';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { loadNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
+import { loadAllNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import TodoList from '../../../components/TodoList';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -31,7 +31,7 @@ export default function EditTodoScreen() {
 
   const loadTodoData = async () => {
     try {
-      const notes = await loadNotes();
+      const notes = await loadAllNotes();
       const todo = notes.find(n => n.id === id);
       if (todo && todo.tasks) {
         setTitle(todo.title);

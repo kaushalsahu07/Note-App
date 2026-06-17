@@ -266,7 +266,8 @@ export function removeNotesChangeListener() {
 export async function notifyNotesChanged(): Promise<void> {
   try {
     const notes = await loadRawNotes();
-    notesChangeCallback?.(notes);
+    // Filter out archived notes so the home screen only shows active notes
+    notesChangeCallback?.(notes.filter(n => !n.archived));
   } catch (error) {
     console.error('Error notifying notes changed:', error);
   }

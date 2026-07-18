@@ -67,13 +67,37 @@ async function apiRequest<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr: any) {
+    throw new Error(
+      'Cannot reach the server. It may be waking up — please try again in 30 seconds.'
+    );
+  }
 
-  const data = await response.json();
+  // Read as text first to oavid JSON parse crashes on HTML error pages
+  const rawText = await response.text();
+
+  let data: any;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    // Server returned non-JSON (e.g. HTML error page, Render cold-start page)
+    console.error('Non-JSON response:', rawText.substring(0, 200));
+    if (response.status === 502 || response.status === 503) {
+      throw new Error(
+        'Server is starting up — please wait 30 seconds and try again.'
+      );
+    }
+    throw new Error(
+      `Server returned an unexpected response (HTTP ${response.status}). It may be waking up — try again shortly.`
+    );
+  }
 
   if (!response.ok) {
     throw new Error(data.error || `Request failed with status ${response.status}`);

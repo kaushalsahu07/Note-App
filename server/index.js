@@ -7,6 +7,7 @@ const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 
 // ─── Config ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
@@ -27,6 +28,32 @@ app.use(helmet());
 app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: `${MAX_PAYLOAD_MB}mb` }));
+
+// Request logging for easier debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Rate limiters for security against brute force & DoS
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many authentication attempts, please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const syncLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  message: { error: 'Too many sync requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth/', authLimiter);
+app.use('/api/sync/', syncLimiter);
 
 // ─── MongoDB connection ──────────────────────────────────────────────
 let db;
@@ -97,6 +124,10 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    if (password.length > 72) {
+      return res.status(400).json({ error: 'Password cannot exceed 72 characters' });
+    }
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -122,6 +153,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const token = generateToken(result.insertedId.toString());
 
+    console.log(`✅ Registered new user: ${email.toLowerCase().trim()}`);
     res.status(201).json({
       message: 'Account created successfully',
       token,
@@ -129,7 +161,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
   } catch (err) {
     console.error('Register error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: 'Registration failed: ' + (err.message || 'Database error') });
   }
 });
 
@@ -140,6 +172,10 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length > 72) {
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const emailH = hashEmail(email);
@@ -155,6 +191,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = generateToken(user._id.toString());
+    console.log(`✅ Logged in user: ${email.toLowerCase().trim()}`);
 
     res.json({
       message: 'Login successful',
@@ -163,7 +200,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Login failed: ' + (err.message || 'Database error') });
   }
 });
 

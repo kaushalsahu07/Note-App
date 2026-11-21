@@ -67,13 +67,15 @@ function bytesToString(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
 }
 
-/** Base64 encode */
+/** Base64 encode in safe chunks to avoid stack overflow and O(N^2) string allocations */
 function toBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const CHUNK_SIZE = 0x8000;
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    chunks.push(String.fromCharCode.apply(null, chunk as unknown as number[]));
   }
-  return btoa(binary);
+  return btoa(chunks.join(''));
 }
 
 /** Base64 decode */
@@ -121,6 +123,26 @@ async function generateKeystreamBlock(key: Uint8Array, iv: Uint8Array, counter: 
 }
 
 /**
+ * Generate multiple keystream blocks in parallel batches.
+ * This massively reduces the sequential await overhead for large data.
+ * Instead of 1 await per 32 bytes, we do 1 await per BATCH_SIZE blocks.
+ */
+const PARALLEL_BATCH_SIZE = 64; // 64 blocks × 32 bytes = 2KB per batch
+
+async function generateKeystreamBatch(
+  key: Uint8Array,
+  iv: Uint8Array,
+  startCounter: number,
+  count: number
+): Promise<Uint8Array[]> {
+  const promises: Promise<Uint8Array>[] = [];
+  for (let i = 0; i < count; i++) {
+    promises.push(generateKeystreamBlock(key, iv, startCounter + i));
+  }
+  return Promise.all(promises);
+}
+
+/**
  * Compute HMAC-SHA-256 for authentication.
  * Uses a simple HMAC construction: H(key ⊕ opad || H(key ⊕ ipad || message))
  */
@@ -165,17 +187,25 @@ async function hmacSHA256(key: Uint8Array, message: Uint8Array): Promise<string>
 
 /**
  * Encrypt plaintext bytes using CTR mode with SHA-256-based keystream.
+ * Uses parallel batch keystream generation for speed.
  */
 async function encryptBytes(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array): Promise<Uint8Array> {
   const ciphertext = new Uint8Array(plaintext.length);
   const blockSize = 32; // SHA-256 output = 32 bytes
+  const totalBlocks = Math.ceil(plaintext.length / blockSize);
 
-  for (let offset = 0; offset < plaintext.length; offset += blockSize) {
-    const counter = Math.floor(offset / blockSize);
-    const keystreamBlock = await generateKeystreamBlock(key, iv, counter);
-    const chunkLen = Math.min(blockSize, plaintext.length - offset);
-    for (let i = 0; i < chunkLen; i++) {
-      ciphertext[offset + i] = plaintext[offset + i] ^ keystreamBlock[i];
+  // Process blocks in parallel batches
+  for (let batchStart = 0; batchStart < totalBlocks; batchStart += PARALLEL_BATCH_SIZE) {
+    const batchCount = Math.min(PARALLEL_BATCH_SIZE, totalBlocks - batchStart);
+    const keystreamBlocks = await generateKeystreamBatch(key, iv, batchStart, batchCount);
+
+    for (let b = 0; b < batchCount; b++) {
+      const offset = (batchStart + b) * blockSize;
+      const chunkLen = Math.min(blockSize, plaintext.length - offset);
+      const ksBlock = keystreamBlocks[b];
+      for (let i = 0; i < chunkLen; i++) {
+        ciphertext[offset + i] = plaintext[offset + i] ^ ksBlock[i];
+      }
     }
   }
 

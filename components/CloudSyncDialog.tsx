@@ -11,10 +11,12 @@ import { Colors } from '../constants/Colors';
 import {
   register, login, logout, pushToCloud, pullFromCloud,
   checkCloudStatus, deleteCloudData, getNextSyncInfo, startAutoSync,
+  testServerConnection,
 } from '../utils/cloudSync';
 import {
   getSyncEmail, isLoggedIn as checkIsLoggedIn, getLastSyncTime,
   isAutoSyncEnabled, setAutoSyncEnabled,
+  getSyncApiUrl, setSyncApiUrl, resetSyncApiUrl,
 } from '../utils/syncConfig';
 
 type ThemeColors = typeof Colors.dark;
@@ -52,6 +54,12 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
   const [isSyncing, setIsSyncing] = useState(false);
 
 
+  // Server Config state
+  const [serverUrl, setServerUrl] = useState('');
+  const [showServerSettings, setShowServerSettings] = useState(false);
+  const [isTestingServer, setIsTestingServer] = useState(false);
+  const [serverTestResult, setServerTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // ─── Init ────────────────────────────────────────────────────────
   useEffect(() => {
     if (visible) {
@@ -60,6 +68,8 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
   }, [visible]);
 
   const checkLoginState = async () => {
+    const currentUrl = await getSyncApiUrl();
+    setServerUrl(currentUrl);
     const loggedIn = await checkIsLoggedIn();
     if (loggedIn) {
       setViewMode('dashboard');
@@ -68,6 +78,30 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
       setViewMode('auth');
       setAuthMode('register');
     }
+  };
+
+  const handleTestServer = async () => {
+    if (!serverUrl.trim()) return;
+    setIsTestingServer(true);
+    setServerTestResult(null);
+    const res = await testServerConnection(serverUrl.trim());
+    setIsTestingServer(false);
+    setServerTestResult(res);
+  };
+
+  const handleSaveServerUrl = async (urlToSave?: string) => {
+    const target = (urlToSave !== undefined ? urlToSave : serverUrl).trim();
+    if (target) {
+      await setSyncApiUrl(target);
+      setServerUrl(target);
+      Alert.alert('Server URL Saved', `Sync server URL set to:\n${target}`);
+    } else {
+      await resetSyncApiUrl();
+      const def = await getSyncApiUrl();
+      setServerUrl(def);
+      Alert.alert('Reset', `Server URL reset to default:\n${def}`);
+    }
+    setServerTestResult(null);
   };
 
   const loadDashboardData = async () => {
@@ -429,6 +463,102 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
                   )}
                 </TouchableOpacity>
 
+                {/* Server Settings Toggle */}
+                <TouchableOpacity
+                  style={styles.serverConfigLink}
+                  onPress={() => setShowServerSettings(!showServerSettings)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="server-outline" size={14} color={colors.accent} />
+                  <Text style={styles.serverConfigLinkText}>
+                    Server: {serverUrl ? serverUrl.replace(/^https?:\/\//, '') : 'Set Server URL'}
+                  </Text>
+                  <Ionicons name={showServerSettings ? 'chevron-up' : 'chevron-down'} size={14} color={colors.icon} />
+                </TouchableOpacity>
+
+                {/* Server Settings Card */}
+                {showServerSettings && (
+                  <View style={styles.serverConfigCard}>
+                    <Text style={styles.serverConfigTitle}>Sync Server Address</Text>
+                    <View style={styles.serverInputRow}>
+                      <TextInput
+                        style={styles.serverInput}
+                        value={serverUrl}
+                        onChangeText={(txt) => { setServerUrl(txt); setServerTestResult(null); }}
+                        placeholder="http://192.168.0.102:3001"
+                        placeholderTextColor={colors.icon}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+
+                    {/* Presets */}
+                    <Text style={styles.presetLabel}>Quick Presets:</Text>
+                    <View style={styles.presetRow}>
+                      <TouchableOpacity
+                        style={styles.presetChip}
+                        onPress={() => { setServerUrl('http://192.168.0.102:3001'); setServerTestResult(null); }}
+                      >
+                        <Text style={styles.presetChipText}>Phone on Wi-Fi (192.168.0.102)</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.presetChip}
+                        onPress={() => { setServerUrl('http://10.0.2.2:3001'); setServerTestResult(null); }}
+                      >
+                        <Text style={styles.presetChipText}>Android Emulator (10.0.2.2)</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.presetChip}
+                        onPress={() => { setServerUrl('http://localhost:3001'); setServerTestResult(null); }}
+                      >
+                        <Text style={styles.presetChipText}>Localhost (Web)</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Test Result Feedback */}
+                    {serverTestResult && (
+                      <View style={[styles.testResultBox, serverTestResult.success ? styles.testSuccess : styles.testFail]}>
+                        <Ionicons
+                          name={serverTestResult.success ? 'checkmark-circle' : 'alert-circle'}
+                          size={16}
+                          color={serverTestResult.success ? '#10B981' : colors.danger}
+                        />
+                        <Text style={[styles.testResultText, { color: serverTestResult.success ? '#10B981' : colors.danger }]}>
+                          {serverTestResult.message}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Actions */}
+                    <View style={styles.serverActionRow}>
+                      <TouchableOpacity
+                        style={[styles.serverActionBtn, styles.serverTestBtn]}
+                        onPress={handleTestServer}
+                        disabled={isTestingServer}
+                        activeOpacity={0.8}
+                      >
+                        {isTestingServer ? (
+                          <ActivityIndicator size="small" color={colors.accent} />
+                        ) : (
+                          <>
+                            <Ionicons name="flash-outline" size={14} color={colors.accent} />
+                            <Text style={styles.serverTestBtnText}>Test Connection</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.serverActionBtn, styles.serverSaveBtn]}
+                        onPress={() => handleSaveServerUrl()}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                        <Text style={styles.serverSaveBtnText}>Save URL</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
 
               </Animated.View>
             ) : (
@@ -758,13 +888,118 @@ function makeStyles(colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      marginTop: 16,
+      marginTop: 14,
       paddingVertical: 8,
     },
     serverConfigLinkText: {
       fontSize: 12,
       color: colors.icon,
       fontWeight: '500',
+    },
+    serverConfigCard: {
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginTop: 6,
+      marginBottom: 10,
+      gap: 8,
+    },
+    serverConfigTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.icon,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    serverInputRow: {
+      backgroundColor: colors.glassLight,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+    serverInput: {
+      fontSize: 13,
+      color: colors.text,
+      padding: 0,
+    },
+    presetLabel: {
+      fontSize: 11,
+      color: colors.icon,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    presetRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    presetChip: {
+      backgroundColor: colors.glassLight,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    presetChipText: {
+      fontSize: 11,
+      color: colors.accent,
+      fontWeight: '600',
+    },
+    testResultBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      padding: 10,
+      borderRadius: 10,
+      marginTop: 2,
+    },
+    testSuccess: {
+      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    },
+    testFail: {
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    },
+    testResultText: {
+      fontSize: 12,
+      fontWeight: '600',
+      flex: 1,
+    },
+    serverActionRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 4,
+    },
+    serverActionBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 12,
+    },
+    serverTestBtn: {
+      backgroundColor: colors.glassLight,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    serverTestBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.accent,
+    },
+    serverSaveBtn: {
+      backgroundColor: colors.accent,
+    },
+    serverSaveBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#fff',
     },
 
     // ─── Dashboard: Account ────────────────────────────

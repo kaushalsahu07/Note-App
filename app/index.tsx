@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, togglePinNote, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener, archiveNotes } from '../utils/storage';
+import { loadNotes, togglePinNote, togglePinNotes, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener, archiveNotes } from '../utils/storage';
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -127,8 +127,8 @@ export default function NotesScreen() {
     selectedIds.every(id => notes.find(n => n.id === id)?.pinned);
 
   const handlePinSelected = async () => {
-    if (selectedIds.length === 1) {
-      await togglePinNote(selectedIds[0]);
+    if (selectedIds.length > 0) {
+      await togglePinNotes(selectedIds);
       clearSelection();
     }
   };
@@ -296,10 +296,10 @@ export default function NotesScreen() {
               style={[
                 styles.actionBarBtn,
                 { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` },
-                selectedIds.length !== 1 && { opacity: 0.4 }
+                selectedIds.length === 0 && { opacity: 0.4 }
               ]}
               onPress={handlePinSelected}
-              disabled={selectedIds.length !== 1}
+              disabled={selectedIds.length === 0}
             >
               <Text style={styles.actionBarBtnEmoji}>📌</Text>
               <Text style={[styles.actionBarBtnText, { color: colors.accent }]}>
@@ -370,7 +370,10 @@ export default function NotesScreen() {
       {/* Settings Modal */}
       {showSettings && (
         <Modal visible={showSettings} animationType="slide" presentationStyle="pageSheet">
-          <Settings onClose={() => setShowSettings(false)} />
+          <Settings onClose={() => {
+            setShowSettings(false);
+            loadStoredNotes();
+          }} />
         </Modal>
       )}
     </View>

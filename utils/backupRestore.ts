@@ -1,17 +1,22 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { File, Paths } from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { encrypt, decrypt, encryptObject, decryptObject, isEncryptedData } from './encryption';
-import { getSessionPassphrase, isE2EEEnabled, notifyNotesChanged } from './storage';
-
-const NOTES_KEY = '@notes_v1';
-const PASSWORDS_KEY = 'saved_passwords';
+import { encryptObject, decryptObject } from './encryption';
+import {
+  getSessionPassphrase,
+  isE2EEEnabled,
+  loadAllNotes,
+  loadRawPasswords,
+  replaceAllNotesAndPasswords,
+  Note,
+  SavedPassword,
+} from './storage';
 
 interface BackupData {
-  notes: any[];
-  passwords: any[];
+  notes: Note[];
+  passwords: SavedPassword[];
   timestamp: string;
   version: string;
   encrypted?: boolean;
@@ -25,35 +30,16 @@ interface BackupData {
  */
 export async function createBackup(asEncrypted: boolean = false) {
   try {
-    const [notesJson, passwordsJson] = await Promise.all([
-      AsyncStorage.getItem(NOTES_KEY),
-      AsyncStorage.getItem(PASSWORDS_KEY),
-    ]);
-
     const passphrase = getSessionPassphrase();
     const e2eeActive = await isE2EEEnabled();
 
-    // Decrypt raw data if currently encrypted (for building backup)
-    let notesArray: any[] = [];
-    let passwordsArray: any[] = [];
-
-    if (notesJson) {
-      if (isEncryptedData(notesJson) && passphrase) {
-        const decrypted = await decrypt(notesJson, passphrase);
-        notesArray = JSON.parse(decrypted);
-      } else if (!isEncryptedData(notesJson)) {
-        notesArray = JSON.parse(notesJson);
-      }
+    if (e2eeActive && !passphrase) {
+      Alert.alert('Vault Locked', 'Please unlock your vault before creating a backup.');
+      return false;
     }
 
-    if (passwordsJson) {
-      if (isEncryptedData(passwordsJson) && passphrase) {
-        const decrypted = await decrypt(passwordsJson, passphrase);
-        passwordsArray = JSON.parse(decrypted);
-      } else if (!isEncryptedData(passwordsJson)) {
-        passwordsArray = JSON.parse(passwordsJson);
-      }
-    }
+    const notesArray = await loadAllNotes();
+    const passwordsArray = await loadRawPasswords();
 
     let backupData: BackupData;
 
@@ -102,78 +88,121 @@ export async function createBackup(asEncrypted: boolean = false) {
 }
 
 /**
- * Restore from a backup file. Auto-detects encrypted backups.
- * @param passphrase  Optional passphrase to decrypt an encrypted backup.
- *                    If the backup is encrypted and no passphrase is provided,
- *                    the session passphrase is used.
+ * Safely read text from a picked file URI across all platforms (Android, iOS, Web).
+ * Handles content://, file://, and sandbox restrictions.
+ */
+async function readPickedFileText(uri: string): Promise<string> {
+  // 1. If it's a local file:// URI (produced by copyToCacheDirectory: true),
+  // Expo SDK 58's new File API reads it directly and cleanly
+  if (uri.startsWith('file://')) {
+    try {
+      return await new File(uri).text();
+    } catch (fileErr) {
+      console.warn('File.text() failed for file:// URI, trying fetch fallback:', fileErr);
+    }
+  }
+
+  // 2. Fetch API handles content:// and file:// in React Native
+  try {
+    const response = await fetch(uri);
+    return await response.text();
+  } catch (fetchErr) {
+    console.warn('fetch fallback failed, trying readAsStringAsync:', fetchErr);
+  }
+
+  // 3. Try legacy readAsStringAsync for content:// via Android ContentResolver
+  try {
+    return await readAsStringAsync(uri);
+  } catch (legacyErr) {
+    console.warn('readAsStringAsync fallback failed:', legacyErr);
+  }
+
+  // 4. Final attempt with File API
+  return await new File(uri).text();
+}
+
+/**
+ * Restore from a backup file. Supports:
+ * - Full backup format { notes: [...], passwords: [...] }
+ * - Direct note array format [ { id, title, content, ... } ]
+ * - Encrypted backup format { encrypted: true, encryptedNotes: "...", ... }
+ * - Encrypted export format { encrypted: true, data: "..." }
+ *
+ * @param passphrase Optional passphrase to decrypt an encrypted backup.
  */
 export async function restoreFromBackup(passphrase?: string) {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/json',
+      copyToCacheDirectory: true,
     });
 
-    if (result.canceled) return false;
+    if (result.canceled || !result.assets || result.assets.length === 0) return false;
 
-    const fileContent = await new File(result.assets[0].uri).text();
-    const backupData: BackupData = JSON.parse(fileContent);
-
-    if (!backupData.version || !backupData.timestamp) {
-      throw new Error('Invalid backup file format');
+    const fileContent = await readPickedFileText(result.assets[0].uri);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(fileContent);
+    } catch {
+      throw new Error('Selected file is not valid JSON.');
     }
 
-    let notesArray: any[];
-    let passwordsArray: any[];
+    let notesArray: Note[] = [];
+    let passwordsArray: SavedPassword[] = [];
 
-    if (backupData.encrypted && backupData.encryptedNotes && backupData.encryptedPasswords) {
-      // Encrypted backup — need a passphrase to decrypt
+    // Format 1: Direct array of notes [ { id, title, ... } ]
+    if (Array.isArray(parsed)) {
+      notesArray = parsed;
+      passwordsArray = [];
+    }
+    // Format 2: Encrypted export format { encrypted: true, data: "..." }
+    else if (parsed.encrypted && typeof parsed.data === 'string') {
+      const pw = passphrase || getSessionPassphrase();
+      if (!pw) {
+        Alert.alert('Passphrase Required', 'This export is encrypted. Please enter your E2EE passphrase.');
+        return 'needs_passphrase';
+      }
+      try {
+        notesArray = await decryptObject<Note[]>(parsed.data, pw);
+      } catch {
+        Alert.alert('Decryption Failed', 'Wrong passphrase or corrupted backup.');
+        return false;
+      }
+    }
+    // Format 3: Encrypted full backup { encrypted: true, encryptedNotes: "...", ... }
+    else if (parsed.encrypted && parsed.encryptedNotes) {
       const pw = passphrase || getSessionPassphrase();
       if (!pw) {
         Alert.alert('Passphrase Required', 'This backup is encrypted. Please enter your E2EE passphrase to restore it.');
         return 'needs_passphrase';
       }
-
       try {
-        notesArray = await decryptObject<any[]>(backupData.encryptedNotes, pw);
-        passwordsArray = await decryptObject<any[]>(backupData.encryptedPasswords, pw);
+        notesArray = await decryptObject<Note[]>(parsed.encryptedNotes, pw);
+        if (parsed.encryptedPasswords) {
+          passwordsArray = await decryptObject<SavedPassword[]>(parsed.encryptedPasswords, pw);
+        }
       } catch {
         Alert.alert('Decryption Failed', 'Wrong passphrase or corrupted backup.');
         return false;
       }
-    } else {
-      // Plaintext backup
-      if (!Array.isArray(backupData.notes) || !Array.isArray(backupData.passwords)) {
-        throw new Error('Invalid backup file format');
-      }
-      notesArray = backupData.notes;
-      passwordsArray = backupData.passwords;
+    }
+    // Format 4: Standard full backup { notes: [...], passwords: [...] }
+    else if (parsed.notes && Array.isArray(parsed.notes)) {
+      notesArray = parsed.notes;
+      passwordsArray = Array.isArray(parsed.passwords) ? parsed.passwords : [];
+    }
+    else {
+      throw new Error('Unrecognized backup format.');
     }
 
-    // Save — if E2EE is currently enabled, re-encrypt the imported data
-    const e2eeActive = await isE2EEEnabled();
-    const sessionPw = getSessionPassphrase();
+    // Persist to storage, update in-memory cache, and notify UI immediately
+    await replaceAllNotesAndPasswords(notesArray, passwordsArray);
 
-    if (e2eeActive && sessionPw) {
-      const encNotes = await encrypt(JSON.stringify(notesArray), sessionPw);
-      const encPasswords = await encrypt(JSON.stringify(passwordsArray), sessionPw);
-      await Promise.all([
-        AsyncStorage.setItem(NOTES_KEY, encNotes),
-        AsyncStorage.setItem(PASSWORDS_KEY, encPasswords),
-      ]);
-    } else {
-      await Promise.all([
-        AsyncStorage.setItem(NOTES_KEY, JSON.stringify(notesArray)),
-        AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwordsArray)),
-      ]);
-    }
-
-    Alert.alert('Success', 'Backup restored successfully');
-    // Auto-refresh the notes list in the UI
-    await notifyNotesChanged();
+    Alert.alert('Success', `Backup restored successfully (${notesArray.length} note${notesArray.length === 1 ? '' : 's'})`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Restore failed:', error);
-    Alert.alert('Error', 'Failed to restore backup');
+    Alert.alert('Error', error?.message || 'Failed to restore backup');
     return false;
   }
 }

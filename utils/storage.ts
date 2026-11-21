@@ -31,7 +31,7 @@ export interface Note {
   passwordHint?: string;
 }
 
-interface SavedPassword {
+export interface SavedPassword {
   id: string;
   title: string;
   password: string;
@@ -43,8 +43,21 @@ interface SavedPassword {
 // ─── Session key (in-memory only — never persisted) ──────────────────
 let _sessionPassphrase: string | null = null;
 
+// ─── In-memory notes cache ──────────────────────────────────────────
+// Avoids decrypting the entire blob from AsyncStorage on every read.
+// The cache is populated on first load and kept in sync by all writes.
+let _notesCache: Note[] | null = null;
+let _notesCacheDirty = false; // true when cache diverges from storage
+
+// Same for passwords
+let _passwordsCache: SavedPassword[] | null = null;
+let _passwordsCacheDirty = false;
+
 export async function setSessionPassphrase(passphrase: string) {
   _sessionPassphrase = passphrase;
+  // Invalidate caches when passphrase changes
+  _notesCache = null;
+  _passwordsCache = null;
   // Pre-derive and cache the encryption key so all
   // subsequent encrypt/decrypt calls are instant
   await precomputeSessionKey(passphrase);
@@ -56,6 +69,10 @@ export function getSessionPassphrase(): string | null {
 
 export function clearSessionPassphrase() {
   _sessionPassphrase = null;
+  _notesCache = null;
+  _notesCacheDirty = false;
+  _passwordsCache = null;
+  _passwordsCacheDirty = false;
   clearSessionKey();
 }
 
@@ -100,6 +117,9 @@ export async function setupE2EE(passphrase: string): Promise<boolean> {
 
     await AsyncStorage.setItem(E2EE_ENABLED_KEY, 'true');
     _sessionPassphrase = passphrase;
+    // Invalidate caches — data format changed
+    _notesCache = null;
+    _passwordsCache = null;
     return true;
   } catch (error) {
     console.error('Failed to setup E2EE:', error);
@@ -129,6 +149,8 @@ export async function disableE2EE(passphrase: string): Promise<boolean> {
     await AsyncStorage.removeItem(E2EE_ENABLED_KEY);
     await AsyncStorage.removeItem(E2EE_PASSPHRASE_HASH_KEY);
     _sessionPassphrase = null;
+    _notesCache = null;
+    _passwordsCache = null;
     clearSessionKey();
     return true;
   } catch (error) {
@@ -181,6 +203,8 @@ export async function changeE2EEPassphrase(
     const newHash = await hashPassphrase(newPassphrase);
     await AsyncStorage.setItem(E2EE_PASSPHRASE_HASH_KEY, newHash);
     _sessionPassphrase = newPassphrase;
+    _notesCache = null;
+    _passwordsCache = null;
     await precomputeSessionKey(newPassphrase);
     return true;
   } catch (error) {
@@ -192,8 +216,14 @@ export async function changeE2EEPassphrase(
 // ─── Internal: load/save with encryption awareness ───────────────────
 
 async function loadRawNotes(): Promise<Note[]> {
+  // Return cached notes if available (avoids expensive decryption)
+  if (_notesCache !== null) return _notesCache;
+
   const raw = await AsyncStorage.getItem(NOTES_KEY);
-  if (!raw) return [];
+  if (!raw) {
+    _notesCache = [];
+    return [];
+  }
 
   if (isEncryptedData(raw)) {
     if (!_sessionPassphrase) {
@@ -201,17 +231,26 @@ async function loadRawNotes(): Promise<Note[]> {
       return [];
     }
     const decrypted = await decrypt(raw, _sessionPassphrase);
-    return JSON.parse(decrypted);
+    _notesCache = JSON.parse(decrypted);
+    return _notesCache!;
   }
 
-  return JSON.parse(raw);
+  _notesCache = JSON.parse(raw);
+  return _notesCache!;
 }
 
 async function saveRawNotes(notes: Note[]): Promise<void> {
+  // Update in-memory cache immediately (UI gets instant feedback)
+  _notesCache = notes;
+
   const json = JSON.stringify(notes);
   const enabled = await isE2EEEnabled();
 
-  if (enabled && _sessionPassphrase) {
+  if (enabled) {
+    if (!_sessionPassphrase) {
+      throw new Error('E2EE is enabled but vault is locked. Please unlock before saving.');
+    }
+    // Encrypt & persist in background — cache is already updated
     const encrypted = await encrypt(json, _sessionPassphrase);
     await AsyncStorage.setItem(NOTES_KEY, encrypted);
   } else {
@@ -219,9 +258,15 @@ async function saveRawNotes(notes: Note[]): Promise<void> {
   }
 }
 
-async function loadRawPasswords(): Promise<SavedPassword[]> {
+export async function loadRawPasswords(): Promise<SavedPassword[]> {
+  // Return cached passwords if available
+  if (_passwordsCache !== null) return _passwordsCache;
+
   const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
-  if (!raw) return [];
+  if (!raw) {
+    _passwordsCache = [];
+    return [];
+  }
 
   if (isEncryptedData(raw)) {
     if (!_sessionPassphrase) {
@@ -229,17 +274,25 @@ async function loadRawPasswords(): Promise<SavedPassword[]> {
       return [];
     }
     const decrypted = await decrypt(raw, _sessionPassphrase);
-    return JSON.parse(decrypted);
+    _passwordsCache = JSON.parse(decrypted);
+    return _passwordsCache!;
   }
 
-  return JSON.parse(raw);
+  _passwordsCache = JSON.parse(raw);
+  return _passwordsCache!;
 }
 
 async function saveRawPasswords(passwords: SavedPassword[]): Promise<void> {
+  // Update in-memory cache immediately
+  _passwordsCache = passwords;
+
   const json = JSON.stringify(passwords);
   const enabled = await isE2EEEnabled();
 
-  if (enabled && _sessionPassphrase) {
+  if (enabled) {
+    if (!_sessionPassphrase) {
+      throw new Error('E2EE is enabled but vault is locked. Please unlock before saving.');
+    }
     const encrypted = await encrypt(json, _sessionPassphrase);
     await AsyncStorage.setItem(PASSWORDS_KEY, encrypted);
   } else {
@@ -260,11 +313,57 @@ export function removeNotesChangeListener() {
 }
 
 /**
+ * Invalidate in-memory caches to force a fresh re-read from storage.
+ */
+export function invalidateNotesCache(): void {
+  _notesCache = null;
+  _passwordsCache = null;
+}
+
+/**
+ * Completely replace notes and passwords (e.g. from restore or cloud pull).
+ * Updates memory cache, persists to storage (with encryption if E2EE is enabled),
+ * and immediately notifies all UI listeners with the new notes.
+ */
+export async function replaceAllNotesAndPasswords(
+  notes: Note[],
+  passwords: SavedPassword[] = []
+): Promise<void> {
+  // Update in-memory caches immediately so any synchronous read gets new data
+  _notesCache = [...notes];
+  _passwordsCache = [...passwords];
+  _notesCacheDirty = false;
+  _passwordsCacheDirty = false;
+
+  const enabled = await isE2EEEnabled();
+  const passphrase = getSessionPassphrase();
+
+  if (enabled && passphrase) {
+    const encNotes = await encrypt(JSON.stringify(notes), passphrase);
+    const encPasswords = await encrypt(JSON.stringify(passwords), passphrase);
+    await Promise.all([
+      AsyncStorage.setItem(NOTES_KEY, encNotes),
+      AsyncStorage.setItem(PASSWORDS_KEY, encPasswords),
+    ]);
+  } else {
+    await Promise.all([
+      AsyncStorage.setItem(NOTES_KEY, JSON.stringify(notes)),
+      AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords)),
+    ]);
+  }
+
+  // Notify UI listener immediately
+  notesChangeCallback?.(notes.filter(n => !n.archived));
+}
+
+/**
  * Reload notes from storage and notify the UI.
  * Used after backup restore to trigger auto-refresh.
  */
 export async function notifyNotesChanged(): Promise<void> {
   try {
+    _notesCache = null;
+    _passwordsCache = null;
     const notes = await loadRawNotes();
     // Filter out archived notes so the home screen only shows active notes
     notesChangeCallback?.(notes.filter(n => !n.archived));
@@ -358,10 +457,16 @@ export async function updateNote(updatedNote: Note): Promise<boolean> {
 }
 
 export async function togglePinNote(id: string): Promise<boolean> {
+  return togglePinNotes([id]);
+}
+
+export async function togglePinNotes(ids: string[]): Promise<boolean> {
   try {
+    if (ids.length === 0) return true;
     const notes = await loadRawNotes();
+    const allPinned = ids.every(id => notes.find(n => n.id === id)?.pinned);
     const updatedNotes = notes.map(note =>
-      note.id === id ? { ...note, pinned: !note.pinned } : note
+      ids.includes(note.id) ? { ...note, pinned: !allPinned } : note
     );
     await saveRawNotes(updatedNotes);
     notesChangeCallback?.(updatedNotes.filter(n => !n.archived));

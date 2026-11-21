@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadAllNotes, updateNote, Note, upsertNotePasswordInManager, deleteNotePasswordFromManager, archiveNotes, unarchiveNotes } from '../../utils/storage';
+import { hashPassword, verifyPassword } from '../../utils/passwordUtils';
 import { Ionicons } from '@expo/vector-icons';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 import PasswordProtectionDialog from '../../components/PasswordProtectionDialog';
@@ -26,7 +27,7 @@ export default function NoteViewScreen() {
   const [isLocked, setIsLocked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isContentFocused, setIsContentFocused] = useState(false);
-  const contentInputRef = useRef<TextInput>(null);
+  const contentInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   const btnScale = useSharedValue(1);
   const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
@@ -75,19 +76,33 @@ export default function NoteViewScreen() {
     }
   };
 
-  const handleVerifyPassword = (password: string) => {
-    if (originalNote?.password === password) {
+  const handleVerifyPassword = async (password: string) => {
+    const isValid = await verifyPassword(password, originalNote?.password);
+    if (isValid) {
       setIsLocked(false);
       setShowPasswordDialog(false);
-      setTitle(originalNote.title);
-      contentRef.current = originalNote.content;
+      setTitle(originalNote?.title || '');
+      contentRef.current = originalNote?.content || '';
     } else {
       Alert.alert('Wrong Password', 'Please try again.');
     }
   };
 
   const handleSave = async () => {
-    if (isSaving || !title.trim() || !contentRef.current.trim()) return;
+    if (isSaving) return;
+    if (!title.trim() && !contentRef.current.trim()) {
+      Alert.alert('Empty Note', 'Please enter a title and content before saving.');
+      return;
+    }
+    if (!title.trim()) {
+      Alert.alert('Title Required', 'Please enter a title for your note.');
+      return;
+    }
+    if (!contentRef.current.trim()) {
+      Alert.alert('Content Required', 'Please enter some content for your note.');
+      return;
+    }
+
     btnScale.value = withSpring(0.93);
     setTimeout(() => { btnScale.value = withSpring(1); }, 150);
     setIsSaving(true);
@@ -116,10 +131,11 @@ export default function NoteViewScreen() {
 
   const handleSetPassword = async (password: string, hint: string) => {
     if (!originalNote) return;
+    const hashedPassword = await hashPassword(password);
     const updated: Note = {
       ...originalNote,
       isPasswordProtected: true,
-      password,
+      password: hashedPassword,
       passwordHint: hint,
       lastModified: new Date().toISOString(),
     };

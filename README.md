@@ -60,7 +60,7 @@ npm install
 # Create a .env file based on .env.example and configure your MongoDB URI
 npm start
 ```
-> Note: Update the `DEFAULT_API_URL` in `utils/syncConfig.ts` to point to your server (e.g., your computer's IP address or a deployed URL).
+> Note: Set `EXPO_PUBLIC_SYNC_SERVER_URL` in `.env` (or copy `.env.example`) to point to your sync server URL (e.g., `http://10.0.2.2:3001` for Android emulator, your computer's local IP for physical devices, or your deployed URL).
 
 ---
 

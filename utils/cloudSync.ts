@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, AppStateStatus } from 'react-native';
 import { encrypt, decrypt, isEncryptedData } from './encryption';
-import { getSessionPassphrase, isE2EEEnabled, notifyNotesChanged } from './storage';
+import { getSessionPassphrase, isE2EEEnabled, notifyNotesChanged, replaceAllNotesAndPasswords } from './storage';
 import {
   getSyncApiUrl, getAuthToken, setAuthToken, setSyncEmail,
   clearAllSyncData, setLastSyncTime, getLastSyncTime,
@@ -45,6 +45,37 @@ interface PullResponse {
 
 // ─── API Helpers ─────────────────────────────────────────────────────
 
+export async function testServerConnection(urlToTest?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const rawUrl = urlToTest || (await getSyncApiUrl());
+    const baseUrl = rawUrl.trim().replace(/\/+$/, '');
+    const url = `${baseUrl}/api/health`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'ok') {
+        return { success: true, message: 'Server is online and responding!' };
+      }
+    }
+    return { success: false, message: `Server returned HTTP ${response.status}` };
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      return { success: false, message: 'Connection timed out (no response in 6s).' };
+    }
+    return { success: false, message: err.message || 'Cannot reach server' };
+  }
+}
+
 async function apiRequest<T>(
   endpoint: string,
   options: {
@@ -54,8 +85,10 @@ async function apiRequest<T>(
   } = {}
 ): Promise<T> {
   const { method = 'GET', body, requireAuth = false } = options;
-  const baseUrl = await getSyncApiUrl();
-  const url = `${baseUrl}${endpoint}`;
+  const rawBaseUrl = await getSyncApiUrl();
+  const baseUrl = rawBaseUrl.trim().replace(/\/+$/, '');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${cleanEndpoint}`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -294,50 +327,79 @@ export async function pullFromCloud(): Promise<{
       }
     }
 
-    // ─── Merge notes: cloud priority for duplicates ─────────────
-    const cloudNoteIds = new Set(bundle.notes.map((n: any) => n.id));
-    const localOnlyNotes = localNotes.filter((n: any) => !cloudNoteIds.has(n.id));
+    // ─── Merge notes: timestamp-aware merge ─────────────
+    const localNotesMap = new Map<string, any>(localNotes.map(n => [n.id, n]));
+    let updatedFromCloud = 0;
+    let keptLocal = 0;
+    let newFromCloud = 0;
 
-    // Count stats
-    const updatedFromCloud = localNotes.filter((n: any) => cloudNoteIds.has(n.id)).length;
-    const newFromCloud = bundle.notes.filter(
-      (n: any) => !localNotes.some((ln: any) => ln.id === n.id)
-    ).length;
+    const mergedNotesMap = new Map<string, any>();
 
-    // Cloud notes first (they take priority), then local-only notes
-    const mergedNotes = [...bundle.notes, ...localOnlyNotes];
-
-    // ─── Merge passwords: cloud priority for duplicates ─────────
-    const cloudPasswordIds = new Set(bundle.passwords.map((p: any) => p.id));
-    const localOnlyPasswords = localPasswords.filter((p: any) => !cloudPasswordIds.has(p.id));
-    const mergedPasswords = [...bundle.passwords, ...localOnlyPasswords];
-
-    // ─── Save merged data ───────────────────────────────────────
-    if (e2eeActive && sessionPassphrase) {
-      const encNotes = await encrypt(JSON.stringify(mergedNotes), sessionPassphrase);
-      const encPasswords = await encrypt(JSON.stringify(mergedPasswords), sessionPassphrase);
-      await Promise.all([
-        AsyncStorage.setItem(NOTES_KEY, encNotes),
-        AsyncStorage.setItem(PASSWORDS_KEY, encPasswords),
-      ]);
-    } else {
-      await Promise.all([
-        AsyncStorage.setItem(NOTES_KEY, JSON.stringify(mergedNotes)),
-        AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(mergedPasswords)),
-      ]);
+    for (const cloudNote of bundle.notes) {
+      const localNote = localNotesMap.get(cloudNote.id);
+      if (!localNote) {
+        mergedNotesMap.set(cloudNote.id, cloudNote);
+        newFromCloud++;
+      } else {
+        const cloudTime = new Date(cloudNote.lastModified || cloudNote.date || 0).getTime();
+        const localTime = new Date(localNote.lastModified || localNote.date || 0).getTime();
+        if (cloudTime >= localTime) {
+          mergedNotesMap.set(cloudNote.id, cloudNote);
+          updatedFromCloud++;
+        } else {
+          mergedNotesMap.set(localNote.id, localNote);
+          keptLocal++;
+        }
+      }
     }
 
-    await setLastSyncTime(new Date().toISOString());
+    for (const localNote of localNotes) {
+      if (!mergedNotesMap.has(localNote.id)) {
+        mergedNotesMap.set(localNote.id, localNote);
+        keptLocal++;
+      }
+    }
 
-    // Notify UI
-    await notifyNotesChanged();
+    const mergedNotes = Array.from(mergedNotesMap.values());
+
+    // ─── Merge passwords: timestamp-aware merge ─────────
+    const localPasswordsMap = new Map<string, any>(localPasswords.map(p => [p.id, p]));
+    const mergedPasswordsMap = new Map<string, any>();
+
+    for (const cloudPassword of bundle.passwords) {
+      const localPassword = localPasswordsMap.get(cloudPassword.id);
+      if (!localPassword) {
+        mergedPasswordsMap.set(cloudPassword.id, cloudPassword);
+      } else {
+        const cloudTime = new Date(cloudPassword.lastModified || cloudPassword.date || 0).getTime();
+        const localTime = new Date(localPassword.lastModified || localPassword.date || 0).getTime();
+        if (cloudTime >= localTime) {
+          mergedPasswordsMap.set(cloudPassword.id, cloudPassword);
+        } else {
+          mergedPasswordsMap.set(localPassword.id, localPassword);
+        }
+      }
+    }
+
+    for (const localPassword of localPasswords) {
+      if (!mergedPasswordsMap.has(localPassword.id)) {
+        mergedPasswordsMap.set(localPassword.id, localPassword);
+      }
+    }
+
+    const mergedPasswords = Array.from(mergedPasswordsMap.values());
+
+    // ─── Save merged data, update memory cache, and notify UI ──
+    await replaceAllNotesAndPasswords(mergedNotes, mergedPasswords);
+
+    await setLastSyncTime(new Date().toISOString());
 
     return {
       success: true,
       mergeStats: {
         totalNotes: mergedNotes.length,
         updatedFromCloud,
-        keptLocal: localOnlyNotes.length,
+        keptLocal,
         newFromCloud,
       },
     };

@@ -142,7 +142,7 @@ export default function NoteCard({
                 <TouchableOpacity
                   key={task.id}
                   style={styles.taskRow}
-                  onPress={(e) => { e.stopPropagation(); onTaskToggle?.(note.id, task.id); }}
+                  onPress={(e) => { e?.stopPropagation?.(); onTaskToggle?.(note.id, task.id); }}
                   activeOpacity={0.7}
                 >
                   {/* Custom checkbox */}
@@ -250,7 +250,7 @@ function makeStyles(colors: ThemeColors) {
     },
 
     colorOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: 20,
     },
 

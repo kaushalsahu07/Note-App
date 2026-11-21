@@ -1,6 +1,6 @@
 import { Note, getSessionPassphrase } from './storage';
 import { encryptObject } from './encryption';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 interface EncryptedExport {
@@ -38,9 +38,15 @@ export async function exportSelectedNotesToFile(notes: Note[], asEncrypted: bool
     filename = 'notes_export.json';
   }
 
-  const path = `${FileSystem.documentDirectory}${filename}`;
-  await FileSystem.writeAsStringAsync(path, content);
-  await Sharing.shareAsync(path);
+  const file = new File(Paths.document, filename);
+  file.write(content);
+
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(file.uri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Export Notes',
+    });
+  }
 }
 
 export const exportNotesToFile = exportSelectedNotesToFile;

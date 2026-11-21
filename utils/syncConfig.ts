@@ -9,8 +9,8 @@ const SYNC_LAST_SYNC_KEY = '@sync_last_sync';
 const SYNC_AUTO_ENABLED_KEY = '@sync_auto_enabled';
 const SYNC_PASSWORD_KEY = 'sync_session_password'; // stored in SecureStore
 
-// ─── Default API URL ─────────────────────────────────────────────────
-const DEFAULT_API_URL = 'Your Server URL or use your computer IP address';
+// ─── Cloud Sync API URL (from environment variable EXPO_PUBLIC_SYNC_SERVER_URL) ───
+const DEFAULT_API_URL = process.env.EXPO_PUBLIC_SYNC_SERVER_URL || 'http://localhost:3001';
 
 // ─── Session password (cached in-memory, persisted in SecureStore) ───
 let _sessionPassword: string | null = null;
@@ -51,9 +51,19 @@ export async function clearSyncSession(): Promise<void> {
 // ─── API URL ─────────────────────────────────────────────────────────
 
 export async function getSyncApiUrl(): Promise<string> {
-  // Clear any stale cached URL from the old "Server settings" feature
+  const customUrl = await AsyncStorage.getItem(SYNC_API_URL_KEY);
+  if (customUrl && customUrl.trim()) {
+    return customUrl.trim();
+  }
+  return process.env.EXPO_PUBLIC_SYNC_SERVER_URL?.trim() || DEFAULT_API_URL;
+}
+
+export async function setSyncApiUrl(url: string): Promise<void> {
+  await AsyncStorage.setItem(SYNC_API_URL_KEY, url.trim());
+}
+
+export async function resetSyncApiUrl(): Promise<void> {
   await AsyncStorage.removeItem(SYNC_API_URL_KEY);
-  return DEFAULT_API_URL;
 }
 
 // ─── Auth Token ──────────────────────────────────────────────────────

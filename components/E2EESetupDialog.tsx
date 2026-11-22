@@ -28,7 +28,7 @@ const MODE_CONFIG: Record<DialogMode, {
 }> = {
   setup: {
     icon: 'shield-checkmark',
-    iconColor: '#34D399',
+    iconColor: '#14B8A6',
     title: 'Enable E2EE',
     subtitle: 'Set a master passphrase to encrypt all your notes and passwords at rest',
     confirmLabel: 'Enable Encryption',
@@ -37,16 +37,16 @@ const MODE_CONFIG: Record<DialogMode, {
   },
   unlock: {
     icon: 'lock-open',
-    iconColor: '#818CF8',
-    title: 'Unlock Vault',
+    iconColor: '#5E7AFF',
+    title: 'Open Vault',
     subtitle: 'Enter your master passphrase to access your encrypted data',
-    confirmLabel: 'Unlock',
+    confirmLabel: 'Open Vault',
     showConfirm: false,
     showNew: false,
   },
   change: {
     icon: 'key',
-    iconColor: '#FBBF24',
+    iconColor: '#F59E0B',
     title: 'Change Passphrase',
     subtitle: 'Enter your current passphrase and a new one',
     confirmLabel: 'Change Passphrase',
@@ -55,7 +55,7 @@ const MODE_CONFIG: Record<DialogMode, {
   },
   disable: {
     icon: 'shield-outline',
-    iconColor: '#F87171',
+    iconColor: '#F43F5E',
     title: 'Disable E2EE',
     subtitle: 'Enter your passphrase to decrypt and disable encryption',
     confirmLabel: 'Disable Encryption',
@@ -235,7 +235,7 @@ export default function E2EESetupDialog({
             <View style={styles.infoPill}>
               <Ionicons name="information-circle" size={14} color={colors.accent} />
               <Text style={styles.infoText}>
-                Remember this passphrase — it cannot be recovered if lost
+                Remember this passphrase: it cannot be recovered if lost
               </Text>
             </View>
           )}

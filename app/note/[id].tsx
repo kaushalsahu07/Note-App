@@ -252,7 +252,7 @@ export default function NoteViewScreen() {
             <Ionicons name="lock-closed" size={40} color={colors.accent} />
           </View>
           <Text style={styles.lockedTitle}>Protected Note</Text>
-          <Text style={styles.lockedSub}>Enter password to unlock</Text>
+          <Text style={styles.lockedSub}>Enter password to open note</Text>
           <TouchableOpacity style={styles.backFromLock} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={18} color={colors.icon} />
             <Text style={styles.backFromLockText}>Go Back</Text>

@@ -1,5 +1,6 @@
 import React, { useState, useImperativeHandle, useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
@@ -45,7 +46,11 @@ export const CustomAlertProvider = ({ children }: { children: React.ReactNode })
 
                             <View style={styles.header}>
                                 <View style={styles.iconWrap}>
-                                    <Text style={styles.emoji}>{config.buttons?.some(b => b.style === 'destructive') ? '⚠️' : '✨'}</Text>
+                                    <Ionicons
+                                        name={config.buttons?.some(b => b.style === 'destructive') ? 'alert-circle' : 'information-circle'}
+                                        size={28}
+                                        color={config.buttons?.some(b => b.style === 'destructive') ? colors.danger : colors.accent}
+                                    />
                                 </View>
                             </View>
 

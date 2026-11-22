@@ -86,11 +86,8 @@ export default function NoteCard({
           onLongPress={onLongPress}
           delayLongPress={350}
         >
-          {/* Solid dark base + translucent color tint overlay */}
+          {/* Solid base + subtle color tint overlay */}
           <View style={[styles.colorOverlay, { backgroundColor: cardBg }]} />
-
-          {/* ── Top accent stripe ─────────────────────────────── */}
-          <View style={[styles.topStripe, { backgroundColor: accent }]} />
 
           {/* ── Header row: icon badge + pin + delete ─────────── */}
           <View style={styles.headerRow}>
@@ -106,7 +103,9 @@ export default function NoteCard({
                 </Text>
               </View>
               {note.pinned && (
-                <Text style={styles.pinnedBadge}>📌</Text>
+                <View style={[styles.pinnedBadgeWrap, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
+                  <Ionicons name="pin" size={10} color={accent} />
+                </View>
               )}
               {note.isPasswordProtected && (
                 <View style={[styles.lockBadge, { backgroundColor: `${accent}20`, borderColor: `${accent}40` }]}>
@@ -176,12 +175,12 @@ export default function NoteCard({
                         styles.progressFill,
                         {
                           width: `${progressPct * 100}%` as any,
-                          backgroundColor: allDone ? '#34D399' : accent,
+                          backgroundColor: allDone ? colors.success : accent,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={[styles.progressLabel, { color: allDone ? '#34D399' : accent }]}>
+                  <Text style={[styles.progressLabel, { color: allDone ? colors.success : accent }]}>
                     {completedCount}/{totalCount}
                   </Text>
                 </View>
@@ -210,7 +209,7 @@ export default function NoteCard({
             {/* Done badge for completed lists */}
             {allDone && (
               <View style={[styles.doneBadge]}>
-                <Ionicons name="checkmark-circle" size={11} color="#34D399" />
+                <Ionicons name="checkmark-circle" size={11} color={colors.success} />
                 <Text style={styles.doneBadgeText}>Done</Text>
               </View>
             )}
@@ -306,9 +305,15 @@ function makeStyles(colors: ThemeColors) {
     },
     typePillText: {
       fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.4,
-      textTransform: 'uppercase',
+      fontWeight: '600',
+    },
+    pinnedBadgeWrap: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
 
     deleteBtn: {
@@ -486,8 +491,7 @@ function makeStyles(colors: ThemeColors) {
 
     wordBadgeText: {
       fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.3,
+      fontWeight: '600',
     },
 
     doneBadge: {
@@ -498,9 +502,8 @@ function makeStyles(colors: ThemeColors) {
 
     doneBadgeText: {
       fontSize: 10,
-      fontWeight: '700',
-      color: '#34D399',
-      letterSpacing: 0.3,
+      fontWeight: '600',
+      color: colors.success,
     },
   });
 }

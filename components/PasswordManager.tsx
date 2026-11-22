@@ -27,16 +27,16 @@ const BIOMETRIC_ENABLED = 'biometric_enabled';
 
 // ─── Category accent colors ──────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
-  General: '#818CF8',
-  Social: '#F472B6',
+  General: '#5E7AFF',
+  Social: '#FB7185',
   Work: '#38BDF8',
-  Finance: '#34D399',
-  Shopping: '#FBBF24',
+  Finance: '#14B8A6',
+  Shopping: '#F59E0B',
   Other: '#A78BFA',
   Note: '#FB923C',
 };
 const categoryColor = (cat?: string) =>
-  CATEGORY_COLORS[cat ?? 'General'] ?? '#6366F1';
+  CATEGORY_COLORS[cat ?? 'General'] ?? '#5E7AFF';
 
 // ────────────────────────────────────────────────────────────────────
 export default function PasswordManager() {
@@ -280,14 +280,14 @@ export default function PasswordManager() {
           </View>
 
           <View style={styles.settingRow}>
-            <View style={[styles.settingIcon, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
-              <Ionicons name="finger-print" size={18} color="#34D399" />
+            <View style={[styles.settingIcon, { backgroundColor: `${colors.success}18` }]}>
+              <Ionicons name="finger-print" size={18} color={colors.success} />
             </View>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Biometric Lock</Text>
               <Text style={styles.settingDesc}>
                 {isBioSupported
-                  ? `${isBioEnabled ? 'Enabled' : 'Disabled'} — tap to toggle`
+                  ? `${isBioEnabled ? 'Enabled' : 'Disabled'} (tap to toggle)`
                   : 'Not supported on this device'}
               </Text>
             </View>
@@ -539,7 +539,7 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
       width: 36,
       height: 36,
       borderRadius: 12,
-      backgroundColor: 'rgba(129,140,248,0.15)',
+      backgroundColor: `${colors.accent}18`,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -889,8 +889,8 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
       justifyContent: 'center',
     },
     toggleOn: {
-      backgroundColor: '#34D399',
-      borderColor: '#34D399',
+      backgroundColor: colors.success,
+      borderColor: colors.success,
     },
     toggleKnob: {
       width: 22,

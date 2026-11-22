@@ -25,16 +25,16 @@ const OPTIONS: OptionConfig[] = [
         label: 'Note',
         description: 'Capture thoughts, ideas & rich text',
         route: '/new',
-        color: '#818CF8',
-        bg: 'rgba(129, 140, 248, 0.12)',
+        color: '#5E7AFF',
+        bg: 'rgba(94, 122, 255, 0.12)',
     },
     {
         icon: 'checkbox',
         label: 'To-Do List',
         description: 'Organize tasks and track progress',
         route: '/new-todo',
-        color: '#34D399',
-        bg: 'rgba(52, 211, 153, 0.12)',
+        color: '#14B8A6',
+        bg: 'rgba(20, 184, 166, 0.12)',
     },
 ];
 
@@ -56,12 +56,9 @@ function OptionItem({ option, delay, onPress }: { option: OptionConfig; delay: n
                     onPressOut={() => { scale.value = withSpring(1, { damping: 12 }); }}
                     onPress={onPress}
                 >
-                    {/* Glow accent line */}
-                    <View style={[styles.accentLine, { backgroundColor: option.color }]} />
-
                     {/* Icon */}
                     <View style={[styles.optionIconWrap, { backgroundColor: option.bg }]}>
-                        <Ionicons name={option.icon as any} size={30} color={option.color} />
+                        <Ionicons name={option.icon as any} size={28} color={option.color} />
                     </View>
 
                     {/* Text */}
@@ -99,7 +96,7 @@ export default function SelectTypeScreen() {
 
             {/* Title */}
             <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.titleSection}>
-                <Text style={styles.titleLabel}>✨  Create New</Text>
+                <Text style={styles.titleLabel}>Create new</Text>
                 <Text style={styles.titleMain}>What are you{'\n'}making today?</Text>
             </Animated.View>
 
@@ -164,10 +161,9 @@ function makeStyles(colors: ThemeColors) {
     },
     titleLabel: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '600',
         color: colors.accent,
-        letterSpacing: 0.5,
-        marginBottom: 10,
+        marginBottom: 8,
     },
     titleMain: {
         fontSize: 40,

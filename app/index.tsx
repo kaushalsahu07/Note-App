@@ -176,7 +176,7 @@ export default function NotesScreen() {
       <Animated.View entering={FadeInDown.duration(700)} style={styles.header}>
         <View style={styles.greetingRow}>
           <View>
-            <Text style={styles.greetingLabel}>{getGreeting()} 👋</Text>
+            <Text style={styles.greetingLabel}>{getGreeting()}</Text>
             <TouchableOpacity onPress={() => { setTempUsername(username); setShowUsernameModal(true); }} activeOpacity={0.7}>
               <Text style={styles.greetingName}>{username || 'Friend'}</Text>
             </TouchableOpacity>
@@ -195,7 +195,7 @@ export default function NotesScreen() {
         <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.statsPill}>
           <Ionicons name="document-text" size={14} color={colors.accent} />
           <Text style={styles.statsText}>{notes.filter(n => !n.tasks).length} note{notes.filter(n => !n.tasks).length !== 1 ? 's' : ''}</Text>
-          <View style={styles.statsDot} />
+          <View style={styles.statsDivider} />
           <Ionicons name="checkmark-circle" size={14} color={colors.accentSecondary} />
           <Text style={styles.statsText}>
             {notes.filter(n => n.tasks).length} list{notes.filter(n => n.tasks).length !== 1 ? 's' : ''}
@@ -240,10 +240,10 @@ export default function NotesScreen() {
               <Ionicons name={searchQuery ? 'search-outline' : 'journal-outline'} size={48} color={colors.accent} />
             </View>
             <Text style={styles.emptyTitle}>
-              {searchQuery ? 'Nothing found' : 'Your canvas awaits'}
+              {searchQuery ? 'Nothing found' : 'No notes yet'}
             </Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Try a different search term' : 'Tap + to create your first note'}
+              {searchQuery ? 'Try a different search term' : 'Tap + to create your first note or list'}
             </Text>
           </Animated.View>
         }
@@ -289,29 +289,37 @@ export default function NotesScreen() {
             <TouchableOpacity
               style={[
                 styles.actionBarBtn,
-                { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` },
+                { backgroundColor: `${colors.accent}18`, borderColor: `${colors.accent}35` },
                 selectedIds.length === 0 && { opacity: 0.4 }
               ]}
               onPress={handlePinSelected}
               disabled={selectedIds.length === 0}
             >
-              <Text style={styles.actionBarBtnEmoji}>📌</Text>
+              <Ionicons name="pin" size={15} color={colors.accent} />
               <Text style={[styles.actionBarBtnText, { color: colors.accent }]}>
                 {allSelectedPinned ? 'Unpin' : 'Pin'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBarBtn, { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(251,191,36,0.12)', borderColor: 'rgba(251,191,36,0.3)' }]}
+              style={[
+                styles.actionBarBtn,
+                { flex: 1, justifyContent: 'center', backgroundColor: `${colors.warning}18`, borderColor: `${colors.warning}35` },
+                selectedIds.length === 0 && { opacity: 0.4 }
+              ]}
               onPress={handleArchiveSelected}
               disabled={selectedIds.length === 0}
             >
-              <Ionicons name="archive" size={16} color="#FBBF24" />
-              <Text style={[styles.actionBarBtnText, { color: '#FBBF24' }]}>Archive</Text>
+              <Ionicons name="archive" size={16} color={colors.warning} />
+              <Text style={[styles.actionBarBtnText, { color: colors.warning }]}>Archive</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBarBtn, { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(248,113,113,0.12)', borderColor: 'rgba(248,113,113,0.3)' }]}
+              style={[
+                styles.actionBarBtn,
+                { flex: 1, justifyContent: 'center', backgroundColor: `${colors.danger}18`, borderColor: `${colors.danger}35` },
+                selectedIds.length === 0 && { opacity: 0.4 }
+              ]}
               onPress={handleDeleteSelected}
               disabled={selectedIds.length === 0}
             >
@@ -449,12 +457,11 @@ function makeStyles(colors: ThemeColors) {
       color: colors.icon,
       fontWeight: '500',
     },
-    statsDot: {
-      width: 3,
-      height: 3,
-      borderRadius: 2,
+    statsDivider: {
+      width: 1,
+      height: 12,
       backgroundColor: colors.border,
-      marginHorizontal: 2,
+      marginHorizontal: 8,
     },
     notesList: {
       paddingHorizontal: 10,
@@ -661,8 +668,9 @@ function makeStyles(colors: ThemeColors) {
     },
     actionBarCountNum: {
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.accent,
+      fontVariant: ['tabular-nums'],
     },
     actionBarCountLabel: {
       fontSize: 14,

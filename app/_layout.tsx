@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { CustomAlertProvider } from '../components/CustomAlert';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import E2EESetupDialog from '../components/E2EESetupDialog';
+import SplashScreen from '../components/SplashScreen';
 import {
   isE2EEEnabled, verifyE2EEPassphrase, setSessionPassphrase,
   notifyNotesChanged,
@@ -15,18 +16,26 @@ function AppStack() {
   const { colors, isDark } = useTheme();
   const [isLocked, setIsLocked] = useState(false);
   const [checkingE2EE, setCheckingE2EE] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
     checkE2EELock();
   }, []);
 
   const checkE2EELock = async () => {
+    const startTime = Date.now();
     try {
       const enabled = await isE2EEEnabled();
       setIsLocked(enabled);
     } catch {
       setIsLocked(false);
     } finally {
+      // Ensure splash is visible for at least 650ms for a smooth entrance and exit
+      const elapsed = Date.now() - startTime;
+      const minDuration = 650;
+      if (elapsed < minDuration) {
+        await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
+      }
       setCheckingE2EE(false);
       // Start auto-sync listener (runs in background)
       startAutoSync();
@@ -44,11 +53,6 @@ function AppStack() {
     }
     return false;
   };
-
-  // While checking E2EE status, show nothing (very brief)
-  if (checkingE2EE) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
-  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -101,7 +105,7 @@ function AppStack() {
 
       {/* E2EE unlock dialog — shown on app start if E2EE is enabled */}
       <E2EESetupDialog
-        visible={isLocked}
+        visible={isLocked && !checkingE2EE}
         mode="unlock"
         onClose={() => {
           // User cannot dismiss the unlock dialog — they must enter their passphrase
@@ -110,6 +114,14 @@ function AppStack() {
         }}
         onSubmit={handleUnlock}
       />
+
+      {/* Animated Splash Screen Overlay */}
+      {splashVisible && (
+        <SplashScreen
+          isReady={!checkingE2EE}
+          onAnimationComplete={() => setSplashVisible(false)}
+        />
+      )}
     </View>
   );
 }

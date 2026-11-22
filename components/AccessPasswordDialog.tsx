@@ -49,7 +49,7 @@ export default function AccessPasswordDialog({
           </View>
 
           <Text style={styles.title}>Protected Note</Text>
-          <Text style={styles.subtitle}>Enter password to unlock</Text>
+          <Text style={styles.subtitle}>Enter password to open</Text>
 
           {/* Password input */}
           <View style={styles.inputRow}>
@@ -98,7 +98,7 @@ export default function AccessPasswordDialog({
               disabled={!password.trim()}
             >
               <Ionicons name="lock-open-outline" size={15} color="#fff" />
-              <Text style={styles.confirmBtnText}>Unlock</Text>
+              <Text style={styles.confirmBtnText}>Open</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

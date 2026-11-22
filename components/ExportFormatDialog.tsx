@@ -43,13 +43,13 @@ export default function ExportFormatDialog({
               onPress={() => onSelectFormat(false)}
               activeOpacity={0.8}
             >
-              <View style={[styles.optionIcon, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
-                <Ionicons name="document-text-outline" size={22} color="#34D399" />
+              <View style={[styles.optionIcon, { backgroundColor: `${colors.success}18` }]}>
+                <Ionicons name="document-text-outline" size={22} color={colors.success} />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>Plain Text</Text>
                 <Text style={styles.optionDesc}>
-                  Readable JSON — anyone with the file can see the data
+                  Readable JSON (anyone with the file can see the data)
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.icon} />
@@ -63,13 +63,13 @@ export default function ExportFormatDialog({
               onPress={() => onSelectFormat(true)}
               activeOpacity={0.8}
             >
-              <View style={[styles.optionIcon, { backgroundColor: 'rgba(129,140,248,0.15)' }]}>
-                <Ionicons name="shield-checkmark" size={22} color="#818CF8" />
+              <View style={[styles.optionIcon, { backgroundColor: `${colors.accent}18` }]}>
+                <Ionicons name="shield-checkmark" size={22} color={colors.accent} />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>Encrypted (E2EE)</Text>
                 <Text style={styles.optionDesc}>
-                  Protected with your passphrase — only you can read it
+                  Protected with your passphrase: only you can read it
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.icon} />

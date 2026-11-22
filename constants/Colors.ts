@@ -1,75 +1,78 @@
 /**
- * Premium Note App Color System — Glassmorphism Theme (Dark & Light)
+ * Hallmark-audited Note App Color System — Refined Utility Theme
  */
 
 export const Colors = {
   light: {
-    text: '#0F172A',
-    background: '#F1F5F9',
-    tint: '#6366F1',
-    surface: 'rgba(255, 255, 255, 0.85)',
+    text: '#111827',
+    background: '#F6F7F9',
+    tint: '#3B62FF',
+    surface: 'rgba(255, 255, 255, 0.95)',
     surfaceSolid: '#FFFFFF',
-    border: 'rgba(99, 102, 241, 0.2)',
-    icon: '#64748B',
-    tabIconDefault: '#94A3B8',
-    tabIconSelected: '#6366F1',
-    accent: '#6366F1',
-    accentSecondary: '#10B981',
-    accentTertiary: '#EC4899',
-    danger: '#EF4444',
-    glass: 'rgba(241, 245, 249, 0.9)',
-    glassLight: 'rgba(99, 102, 241, 0.08)',
-    gradient1: '#6366F1',
-    gradient2: '#10B981',
+    border: 'rgba(15, 23, 42, 0.09)',
+    icon: '#6B7280',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: '#3B62FF',
+    accent: '#3B62FF',
+    accentSecondary: '#0D9488',
+    accentTertiary: '#E11D48',
+    danger: '#E11D48',
+    warning: '#D97706',
+    success: '#0D9488',
+    glass: 'rgba(246, 247, 249, 0.95)',
+    glassLight: 'rgba(59, 98, 255, 0.06)',
+    gradient1: '#3B62FF',
+    gradient2: '#0D9488',
     cardBase: '#FFFFFF',
   },
   dark: {
-    text: '#F1F5F9',
-    background: '#080C14',
-    tint: '#818CF8',
-    surface: 'rgba(30, 41, 59, 0.7)',
-    surfaceSolid: '#1E293B',
-    border: 'rgba(99, 102, 241, 0.25)',
-    icon: '#64748B',
-    tabIconDefault: '#64748B',
-    tabIconSelected: '#818CF8',
-    accent: '#818CF8',
-    accentSecondary: '#34D399',
-    accentTertiary: '#F472B6',
-    danger: '#F87171',
-    glass: 'rgba(15, 23, 42, 0.6)',
-    glassLight: 'rgba(99, 102, 241, 0.08)',
-    gradient1: '#818CF8',
-    gradient2: '#34D399',
-    cardBase: '#0F172A',
+    text: '#F8FAFC',
+    background: '#0B0F19',
+    tint: '#5E7AFF',
+    surface: 'rgba(18, 24, 38, 0.85)',
+    surfaceSolid: '#131A29',
+    border: 'rgba(255, 255, 255, 0.08)',
+    icon: '#828FA3',
+    tabIconDefault: '#606E85',
+    tabIconSelected: '#5E7AFF',
+    accent: '#5E7AFF',
+    accentSecondary: '#14B8A6',
+    accentTertiary: '#FB7185',
+    danger: '#F43F5E',
+    warning: '#F59E0B',
+    success: '#14B8A6',
+    glass: 'rgba(11, 15, 25, 0.85)',
+    glassLight: 'rgba(94, 122, 255, 0.08)',
+    gradient1: '#5E7AFF',
+    gradient2: '#14B8A6',
+    cardBase: '#131A29',
   },
 };
 
-// Note card color palette — vibrant glassmorphism tints
+// Note card color palette — subtle, refined tactile tints
 export const NOTE_COLORS = [
-  'rgba(129, 140, 248, 0.22)',  // indigo
-  'rgba(52, 211, 153, 0.22)',   // emerald
-  'rgba(244, 114, 182, 0.22)',  // pink
-  'rgba(251, 191, 36, 0.22)',   // amber
-  'rgba(56, 189, 248, 0.22)',   // sky blue
-  'rgba(167, 139, 250, 0.22)',  // violet
+  'rgba(94, 122, 255, 0.12)',  // cobalt
+  'rgba(20, 184, 166, 0.12)',  // mint / teal
+  'rgba(251, 113, 133, 0.12)', // rose
+  'rgba(245, 158, 11, 0.12)',  // amber
+  'rgba(56, 189, 248, 0.12)',  // sky
+  'rgba(167, 139, 250, 0.12)', // iris
 ];
 
 export const NOTE_BORDER_COLORS = [
-  'rgba(129, 140, 248, 0.55)',
-  'rgba(52, 211, 153, 0.55)',
-  'rgba(244, 114, 182, 0.55)',
-  'rgba(251, 191, 36, 0.55)',
-  'rgba(56, 189, 248, 0.55)',
-  'rgba(167, 139, 250, 0.55)',
+  'rgba(94, 122, 255, 0.35)',
+  'rgba(20, 184, 166, 0.35)',
+  'rgba(251, 113, 133, 0.35)',
+  'rgba(245, 158, 11, 0.35)',
+  'rgba(56, 189, 248, 0.35)',
+  'rgba(167, 139, 250, 0.35)',
 ];
 
-
 export const NOTE_ACCENT_COLORS = [
-  '#818CF8',
-  '#34D399',
-  '#F472B6',
-  '#FBBF24',
+  '#5E7AFF',
+  '#14B8A6',
+  '#FB7185',
+  '#F59E0B',
   '#38BDF8',
   '#A78BFA',
 ];

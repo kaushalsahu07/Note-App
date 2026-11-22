@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from './CustomAlert';
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { createBackup, restoreFromBackup } from '../utils/backupRestore';
@@ -12,7 +12,6 @@ import PasswordManager from './PasswordManager';
 import E2EESetupDialog from './E2EESetupDialog';
 import ExportFormatDialog from './ExportFormatDialog';
 import CloudSyncDialog from './CloudSyncDialog';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
@@ -26,32 +25,31 @@ interface SettingRowProps {
   label: string;
   description?: string;
   onPress: () => void;
-  index: number;
+  index?: number;
   colors: typeof Colors.dark;
 }
 
-function SettingRow({ icon, iconColor, label, description, onPress, index, colors }: SettingRowProps) {
+function SettingRow({ icon, iconColor, label, description, onPress, colors }: SettingRowProps) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
-      <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.75}>
-        <View style={[styles.rowIcon, { backgroundColor: `${iconColor}18` }]}>
-          <Ionicons name={icon as any} size={20} color={iconColor} />
-        </View>
-        <View style={styles.rowContent}>
-          <Text style={styles.rowLabel}>{label}</Text>
-          {description && <Text style={styles.rowDesc}>{description}</Text>}
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.icon} style={{ opacity: 0.5 }} />
-      </TouchableOpacity>
-    </Animated.View>
+    <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.75}>
+      <View style={[styles.rowIcon, { backgroundColor: `${iconColor}18` }]}>
+        <Ionicons name={icon as any} size={20} color={iconColor} />
+      </View>
+      <View style={styles.rowContent}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        {description && <Text style={styles.rowDesc}>{description}</Text>}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.icon} style={{ opacity: 0.5 }} />
+    </TouchableOpacity>
   );
 }
 
 export default function Settings({ onClose }: { onClose: () => void }) {
   const { colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
+  const topInset = Platform.OS === 'ios' ? 8 : Math.max(insets.top, 12);
+  const styles = useMemo(() => makeStyles(colors, topInset), [colors, topInset]);
 
   // E2EE state
   const [e2eeEnabled, setE2eeEnabled] = useState(false);
@@ -228,23 +226,21 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <View style={styles.handleBar} />
 
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
           <Ionicons name="close" size={20} color={colors.icon} />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
         {/* Appearance section */}
-        <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-          <Text style={styles.sectionLabel}>🎨  Appearance</Text>
-        </Animated.View>
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.card}>
+        <Text style={styles.sectionLabel}>Appearance</Text>
+        <View style={styles.card}>
           <TouchableOpacity style={styles.themeRow} onPress={toggleTheme} activeOpacity={0.8}>
-            <View style={[styles.rowIcon, { backgroundColor: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.12)' }]}>
-              <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={isDark ? '#FBBF24' : colors.accent} />
+            <View style={[styles.rowIcon, { backgroundColor: isDark ? `${colors.warning}18` : `${colors.accent}12` }]}>
+              <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={isDark ? colors.warning : colors.accent} />
             </View>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
@@ -254,53 +250,45 @@ export default function Settings({ onClose }: { onClose: () => void }) {
               <View style={[styles.themeToggleKnob, isDark && styles.themeToggleKnobDark]} />
             </View>
           </TouchableOpacity>
-        </Animated.View>
-
-        {/* Security section */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-          <Text style={styles.sectionLabel}>🔐  Security</Text>
-        </Animated.View>
-        <View style={styles.card}>
-          <PasswordManager />
         </View>
 
+        {/* Security section */}
+        <Text style={styles.sectionLabel}>Security</Text>
+        <PasswordManager />
+
         {/* E2EE section */}
-        <Animated.View entering={FadeInDown.delay(130).duration(400)}>
-          <Text style={styles.sectionLabel}>🛡️  Encryption</Text>
-        </Animated.View>
+        <Text style={styles.sectionLabel}>Encryption</Text>
         <View style={styles.card}>
           {/* Status indicator */}
-          <Animated.View entering={FadeInDown.delay(140).duration(400)}>
-            <View style={styles.e2eeStatusRow}>
-              <View style={[
-                styles.e2eeStatusIcon,
-                { backgroundColor: e2eeEnabled ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.12)' }
-              ]}>
-                <Ionicons
-                  name={e2eeEnabled ? 'shield-checkmark' : 'shield-outline'}
-                  size={20}
-                  color={e2eeEnabled ? '#34D399' : colors.icon}
-                />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>End-to-End Encryption</Text>
-                <Text style={[styles.rowDesc, e2eeEnabled && { color: '#34D399' }]}>
-                  {e2eeEnabled ? 'Active — data encrypted at rest' : 'Disabled — data stored as plaintext'}
-                </Text>
-              </View>
-              <View style={[
-                styles.e2eeStatusBadge,
-                { backgroundColor: e2eeEnabled ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.12)' }
-              ]}>
-                <Text style={[
-                  styles.e2eeStatusBadgeText,
-                  { color: e2eeEnabled ? '#34D399' : colors.danger }
-                ]}>
-                  {e2eeEnabled ? 'ON' : 'OFF'}
-                </Text>
-              </View>
+          <View style={styles.e2eeStatusRow}>
+            <View style={[
+              styles.e2eeStatusIcon,
+              { backgroundColor: e2eeEnabled ? `${colors.success}18` : `${colors.danger}15` }
+            ]}>
+              <Ionicons
+                name={e2eeEnabled ? 'shield-checkmark' : 'shield-outline'}
+                size={20}
+                color={e2eeEnabled ? colors.success : colors.icon}
+              />
             </View>
-          </Animated.View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>End-to-End Encryption</Text>
+              <Text style={[styles.rowDesc, e2eeEnabled && { color: colors.success }]}>
+                {e2eeEnabled ? 'Active: data encrypted at rest' : 'Disabled: data stored as plaintext'}
+              </Text>
+            </View>
+            <View style={[
+              styles.e2eeStatusBadge,
+              { backgroundColor: e2eeEnabled ? `${colors.success}18` : `${colors.danger}15` }
+            ]}>
+              <Text style={[
+                styles.e2eeStatusBadgeText,
+                { color: e2eeEnabled ? colors.success : colors.danger }
+              ]}>
+                {e2eeEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </View>
+          </View>
 
           <View style={styles.separator} />
 
@@ -309,11 +297,10 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             <>
               <SettingRow
                 icon="key-outline"
-                iconColor="#FBBF24"
+                iconColor={colors.warning}
                 label="Change Passphrase"
                 description="Update your master passphrase"
                 onPress={handleChangePassphrase}
-                index={4}
                 colors={colors}
               />
               <View style={styles.separator} />
@@ -323,60 +310,53 @@ export default function Settings({ onClose }: { onClose: () => void }) {
                 label="Disable E2EE"
                 description="Decrypt and remove encryption"
                 onPress={handleDisableE2EE}
-                index={5}
                 colors={colors}
               />
             </>
           ) : (
             <SettingRow
               icon="shield-checkmark"
-              iconColor="#34D399"
+              iconColor={colors.success}
               label="Enable E2EE"
               description="Encrypt all notes & passwords"
               onPress={handleEnableE2EE}
-              index={4}
               colors={colors}
             />
           )}
         </View>
 
         {/* Cloud Sync section */}
-        <Animated.View entering={FadeInDown.delay(155).duration(400)}>
-          <Text style={styles.sectionLabel}>☁️  Cloud Sync</Text>
-        </Animated.View>
+        <Text style={styles.sectionLabel}>Cloud sync</Text>
         <View style={styles.card}>
           <SettingRow
             icon="cloud-outline"
-            iconColor="#38BDF8"
+            iconColor={colors.accent}
             label="Cloud Sync"
             description={syncLoggedIn ? syncStatusText : 'Sign in to sync your data'}
             onPress={() => setCloudSyncDialogVisible(true)}
-            index={6}
             colors={colors}
           />
           {syncLoggedIn && autoSyncText ? (
             <>
               <View style={styles.separator} />
-              <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.autoSyncInfo}>
-                <View style={[styles.rowIcon, { backgroundColor: 'rgba(52,211,153,0.12)' }]}>
-                  <Ionicons name="sync-circle" size={20} color="#34D399" />
+              <View style={styles.autoSyncInfo}>
+                <View style={[styles.rowIcon, { backgroundColor: `${colors.success}18` }]}>
+                  <Ionicons name="sync-circle" size={20} color={colors.success} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>Auto-Sync</Text>
                   <Text style={styles.rowDesc}>{autoSyncText}</Text>
                 </View>
-                <View style={[styles.e2eeStatusBadge, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
-                  <Text style={[styles.e2eeStatusBadgeText, { color: '#34D399' }]}>ON</Text>
+                <View style={[styles.e2eeStatusBadge, { backgroundColor: `${colors.success}18` }]}>
+                  <Text style={[styles.e2eeStatusBadgeText, { color: colors.success }]}>ON</Text>
                 </View>
-              </Animated.View>
+              </View>
             </>
           ) : null}
         </View>
 
         {/* Backup section */}
-        <Animated.View entering={FadeInDown.delay(190).duration(400)}>
-          <Text style={styles.sectionLabel}>💾  Backup & Restore</Text>
-        </Animated.View>
+        <Text style={styles.sectionLabel}>Backup & restore</Text>
         <View style={styles.card}>
           <SettingRow
             icon="cloud-upload-outline"
@@ -384,7 +364,6 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             label="Create Backup"
             description={e2eeEnabled ? 'Export notes (choose format)' : 'Export your notes to a file'}
             onPress={handleBackup}
-            index={7}
             colors={colors}
           />
           <View style={styles.separator} />
@@ -394,24 +373,21 @@ export default function Settings({ onClose }: { onClose: () => void }) {
             label="Restore Data"
             description="Import notes from a backup file"
             onPress={handleRestore}
-            index={8}
             colors={colors}
           />
         </View>
 
         {/* About section */}
-        <Animated.View entering={FadeInDown.delay(220).duration(400)}>
-          <Text style={styles.sectionLabel}>ℹ️  About</Text>
-        </Animated.View>
-        <Animated.View entering={FadeInDown.delay(260).duration(400)} style={styles.aboutCard}>
+        <Text style={styles.sectionLabel}>About</Text>
+        <View style={styles.aboutCard}>
           <View style={styles.appIconWrap}>
-            <Ionicons name="journal" size={36} color={colors.accent} />
+            <Ionicons name="journal" size={32} color={colors.accent} />
           </View>
-          <View>
+          <View style={styles.aboutContent}>
             <Text style={styles.appName}>Note App</Text>
             <Text style={styles.appVersion}>Version {Constants.expoConfig?.version || '1.0.0'}</Text>
           </View>
-        </Animated.View>
+        </View>
 
       </ScrollView>
 
@@ -457,42 +433,40 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: topInset },
     handleBar: {
-      width: 40, height: 4, borderRadius: 2,
+      width: 36, height: 4, borderRadius: 2,
       backgroundColor: colors.border,
       alignSelf: 'center',
-      marginTop: 16, marginBottom: 8,
+      marginTop: 10, marginBottom: 6,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 22,
-      paddingTop: 8,
-      paddingBottom: 20,
-      borderBottomWidth: 1,
+      paddingHorizontal: 20,
+      paddingTop: 6,
+      paddingBottom: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
     title: {
-      fontSize: 24, fontWeight: '800',
-      color: colors.text, letterSpacing: -0.6,
+      fontSize: 22, fontWeight: '700',
+      color: colors.text, letterSpacing: -0.3,
     },
     closeBtn: {
-      width: 38, height: 38, borderRadius: 19,
+      width: 36, height: 36, borderRadius: 18,
       backgroundColor: colors.surfaceSolid,
       borderWidth: 1, borderColor: colors.border,
       justifyContent: 'center', alignItems: 'center',
     },
-    scroll: { padding: 20, paddingBottom: 60 },
+    scroll: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 60 },
     sectionLabel: {
-      fontSize: 13, fontWeight: '700',
+      fontSize: 13, fontWeight: '600',
       color: colors.icon,
-      letterSpacing: 0.5,
-      marginTop: 24, marginBottom: 10,
-      textTransform: 'uppercase',
+      marginTop: 20, marginBottom: 8,
     },
     card: {
       backgroundColor: colors.surfaceSolid,
-      borderRadius: 20,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
@@ -500,41 +474,44 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
     settingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 16,
-      gap: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
     },
     themeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 16,
-      gap: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
     },
     rowIcon: {
-      width: 42, height: 42, borderRadius: 14,
+      width: 40, height: 40, borderRadius: 12,
       justifyContent: 'center', alignItems: 'center',
     },
-    rowContent: { flex: 1 },
-    rowLabel: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
-    rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2 },
+    rowContent: { flex: 1, flexShrink: 1 },
+    rowLabel: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
+    rowDesc: { fontSize: 13, color: colors.icon, marginTop: 2, lineHeight: 18 },
     autoSyncInfo: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      padding: 16,
-      gap: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
     },
     separator: {
-      height: 1, backgroundColor: colors.border,
-      marginLeft: 72,
+      height: StyleSheet.hairlineWidth, backgroundColor: colors.border,
+      marginLeft: 68,
     },
     themeToggle: {
-      width: 50, height: 28, borderRadius: 14,
+      width: 48, height: 28, borderRadius: 14,
       backgroundColor: colors.glassLight,
       borderWidth: 1, borderColor: colors.border,
-      padding: 3, justifyContent: 'center',
+      padding: 2, justifyContent: 'center',
     },
     themeToggleDark: {
-      backgroundColor: '#818CF8',
-      borderColor: '#818CF8',
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
     },
     themeToggleKnob: {
       width: 22, height: 22, borderRadius: 11,
@@ -549,35 +526,40 @@ function makeStyles(colors: ThemeColors, topInset: number = 0) {
     e2eeStatusRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 16,
-      gap: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
     },
     e2eeStatusIcon: {
-      width: 42, height: 42, borderRadius: 14,
+      width: 40, height: 40, borderRadius: 12,
       justifyContent: 'center', alignItems: 'center',
     },
     e2eeStatusBadge: {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 8,
+      alignSelf: 'center',
     },
     e2eeStatusBadgeText: {
       fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.5,
+      fontWeight: '700',
     },
     aboutCard: {
       backgroundColor: colors.surfaceSolid,
-      borderRadius: 20, borderWidth: 1, borderColor: colors.border,
-      padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16,
+      borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+      padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
+    },
+    aboutContent: {
+      flex: 1,
+      flexShrink: 1,
     },
     appIconWrap: {
-      width: 64, height: 64, borderRadius: 20,
+      width: 50, height: 50, borderRadius: 14,
       backgroundColor: colors.glassLight,
       borderWidth: 1, borderColor: colors.border,
       justifyContent: 'center', alignItems: 'center',
     },
-    appName: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
-    appVersion: { fontSize: 13, color: colors.icon, marginTop: 3 },
+    appName: { fontSize: 17, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
+    appVersion: { fontSize: 13, color: colors.icon, marginTop: 2 },
   });
 }

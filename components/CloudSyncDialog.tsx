@@ -192,9 +192,9 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
 
   const handlePull = async () => {
     Alert.alert(
-      '☁️ Restore from Cloud',
+      'Restore from Cloud',
       'Your local notes will be merged with the cloud version.\n\n' +
-      '⚠️ If a note exists in both local and cloud, the cloud version will take priority.\n\n' +
+      'If a note exists in both local and cloud, the cloud version will take priority.\n\n' +
       'Local-only notes will be kept safe.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -208,16 +208,16 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
             if (result.success && result.mergeStats) {
               const { totalNotes, updatedFromCloud, keptLocal, newFromCloud } = result.mergeStats;
               Alert.alert(
-                '✅ Restored!',
+                'Restored',
                 `Your data has been merged successfully.\n\n` +
-                `📝 Total notes: ${totalNotes}\n` +
-                (updatedFromCloud > 0 ? `☁️ Updated from cloud: ${updatedFromCloud}\n` : '') +
-                (newFromCloud > 0 ? `🆕 New from cloud: ${newFromCloud}\n` : '') +
-                (keptLocal > 0 ? `📱 Local-only notes kept: ${keptLocal}` : '')
+                `Total notes: ${totalNotes}\n` +
+                (updatedFromCloud > 0 ? `Updated from cloud: ${updatedFromCloud}\n` : '') +
+                (newFromCloud > 0 ? `New from cloud: ${newFromCloud}\n` : '') +
+                (keptLocal > 0 ? `Local-only notes kept: ${keptLocal}` : '')
               );
               loadDashboardData();
             } else if (result.success) {
-              Alert.alert('✅ Restored!', 'Your data has been merged from the cloud.');
+              Alert.alert('Restored', 'Your data has been merged from the cloud.');
               loadDashboardData();
             } else {
               Alert.alert('Restore Failed', result.error || 'Failed to pull data');
@@ -230,7 +230,7 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
 
   const handleDeleteCloud = () => {
     Alert.alert(
-      '⚠️ Delete Cloud Data',
+      'Delete Cloud Data',
       'This will permanently delete ALL your data from the cloud. Your local data will not be affected.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -286,16 +286,16 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
 
   const getPasswordStrength = (pw: string): { label: string; color: string; width: string } => {
     if (pw.length === 0) return { label: '', color: 'transparent', width: '0%' };
-    if (pw.length < 6) return { label: 'Too short', color: '#EF4444', width: '15%' };
-    if (pw.length < 8) return { label: 'Weak', color: '#F59E0B', width: '33%' };
+    if (pw.length < 6) return { label: 'Too short', color: colors.danger, width: '15%' };
+    if (pw.length < 8) return { label: 'Weak', color: colors.warning, width: '33%' };
     const hasUpper = /[A-Z]/.test(pw);
     const hasLower = /[a-z]/.test(pw);
     const hasNumber = /[0-9]/.test(pw);
     const hasSpecial = /[^A-Za-z0-9]/.test(pw);
     const variety = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-    if (pw.length >= 12 && variety >= 3) return { label: 'Strong', color: '#10B981', width: '100%' };
-    if (pw.length >= 8 && variety >= 2) return { label: 'Good', color: '#34D399', width: '66%' };
-    return { label: 'Fair', color: '#FBBF24', width: '50%' };
+    if (pw.length >= 12 && variety >= 3) return { label: 'Strong', color: colors.success, width: '100%' };
+    if (pw.length >= 8 && variety >= 2) return { label: 'Good', color: colors.accentSecondary, width: '66%' };
+    return { label: 'Fair', color: colors.warning, width: '50%' };
   };
 
   const formatSyncTime = (iso: string | null): string => {
@@ -519,9 +519,9 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
                         <Ionicons
                           name={serverTestResult.success ? 'checkmark-circle' : 'alert-circle'}
                           size={16}
-                          color={serverTestResult.success ? '#10B981' : colors.danger}
+                          color={serverTestResult.success ? colors.success : colors.danger}
                         />
-                        <Text style={[styles.testResultText, { color: serverTestResult.success ? '#10B981' : colors.danger }]}>
+                        <Text style={[styles.testResultText, { color: serverTestResult.success ? colors.success : colors.danger }]}>
                           {serverTestResult.message}
                         </Text>
                       </View>

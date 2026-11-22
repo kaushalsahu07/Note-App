@@ -1,6 +1,6 @@
 import { CustomAlert as Alert } from '../../../components/CustomAlert';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { TextInput, TouchableOpacity, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadAllNotes, updateNote, Note, TodoItem } from '../../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';

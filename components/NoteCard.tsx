@@ -3,10 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-nativ
 import { Note } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
-  FadeInDown, Layout,
+  FadeInDown,
   useAnimatedStyle, useSharedValue,
-  withSpring, withTiming, interpolate,
-  Extrapolation,
+  withTiming,
 } from 'react-native-reanimated';
 import { Colors, NOTE_COLORS, NOTE_BORDER_COLORS, NOTE_ACCENT_COLORS } from '../constants/Colors';
 import { useTheme } from '../context/ThemeContext';

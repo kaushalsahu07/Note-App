@@ -2,7 +2,6 @@ import * as Crypto from 'expo-crypto';
 
 // ─── Constants ───────────────────────────────────────────────────────
 const E2EE_PREFIX = 'e2ee:v1:';
-const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 16;  // 128 bits
 const SALT_LENGTH = 16;
 

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  encrypt, decrypt, encryptObject, decryptObject,
+  encrypt, decrypt,
   isEncryptedData, hashPassphrase, verifyPassphraseHash,
   precomputeSessionKey, clearSessionKey,
 } from './encryption';
@@ -47,11 +47,9 @@ let _sessionPassphrase: string | null = null;
 // Avoids decrypting the entire blob from AsyncStorage on every read.
 // The cache is populated on first load and kept in sync by all writes.
 let _notesCache: Note[] | null = null;
-let _notesCacheDirty = false; // true when cache diverges from storage
 
 // Same for passwords
 let _passwordsCache: SavedPassword[] | null = null;
-let _passwordsCacheDirty = false;
 
 export async function setSessionPassphrase(passphrase: string) {
   _sessionPassphrase = passphrase;
@@ -70,9 +68,7 @@ export function getSessionPassphrase(): string | null {
 export function clearSessionPassphrase() {
   _sessionPassphrase = null;
   _notesCache = null;
-  _notesCacheDirty = false;
   _passwordsCache = null;
-  _passwordsCacheDirty = false;
   clearSessionKey();
 }
 
@@ -332,8 +328,6 @@ export async function replaceAllNotesAndPasswords(
   // Update in-memory caches immediately so any synchronous read gets new data
   _notesCache = [...notes];
   _passwordsCache = [...passwords];
-  _notesCacheDirty = false;
-  _passwordsCacheDirty = false;
 
   const enabled = await isE2EEEnabled();
   const passphrase = getSessionPassphrase();
@@ -527,26 +521,6 @@ export async function loadArchivedNotes(): Promise<Note[]> {
   } catch (error) {
     console.error('Error loading archived notes:', error);
     return [];
-  }
-}
-
-export async function savePasswordToManager(title: string, password: string) {
-  try {
-    let passwords = await loadRawPasswords();
-
-    const newPassword: SavedPassword = {
-      id: Date.now().toString(),
-      title,
-      password,
-      date: new Date().toLocaleDateString(),
-    };
-
-    passwords = [newPassword, ...passwords];
-    await saveRawPasswords(passwords);
-    return true;
-  } catch (error) {
-    console.error('Error saving password:', error);
-    return false;
   }
 }
 

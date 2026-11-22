@@ -1,5 +1,5 @@
 import { CustomAlert as Alert } from './CustomAlert';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform,
@@ -30,7 +30,7 @@ type ViewMode = 'auth' | 'dashboard';
 type AuthMode = 'login' | 'register';
 
 export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // Auth state
@@ -48,7 +48,6 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
   const [lastSyncTime, setLastSyncTimeSt] = useState<string | null>(null);
   const [cloudExists, setCloudExists] = useState(false);
   const [cloudSize, setCloudSize] = useState(0);
-  const [cloudUpdatedAt, setCloudUpdatedAt] = useState('');
   const [autoSync, setAutoSync] = useState(false);
   const [nextSync, setNextSync] = useState<{ hoursLeft: number; minutesLeft: number } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -119,7 +118,6 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
       setAutoSync(autoEnabled);
       setCloudExists(status.exists);
       setCloudSize(status.sizeBytes || 0);
-      setCloudUpdatedAt(status.updatedAt || '');
       setNextSync(nextSyncInfo);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -485,7 +483,7 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
                         style={styles.serverInput}
                         value={serverUrl}
                         onChangeText={(txt) => { setServerUrl(txt); setServerTestResult(null); }}
-                        placeholder="http://192.168.0.102:3001"
+                        placeholder="http://192.168.0.106:3001"
                         placeholderTextColor={colors.icon}
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -497,9 +495,9 @@ export default function CloudSyncDialog({ visible, onClose }: CloudSyncDialogPro
                     <View style={styles.presetRow}>
                       <TouchableOpacity
                         style={styles.presetChip}
-                        onPress={() => { setServerUrl('http://192.168.0.102:3001'); setServerTestResult(null); }}
+                        onPress={() => { setServerUrl('http://192.168.0.106:3001'); setServerTestResult(null); }}
                       >
-                        <Text style={styles.presetChipText}>Phone on Wi-Fi (192.168.0.102)</Text>
+                        <Text style={styles.presetChipText}>Phone on Wi-Fi (192.168.0.106)</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.presetChip}

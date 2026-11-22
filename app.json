@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "Notes",
-    "slug": "notes-app",
+    "slug": "note",
     "version": "1.5.0",
-    "owner": "kaushalsahu.07",
+    "owner": "kaushalsahus-team",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -31,13 +31,15 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-sharing",
-      "expo-web-browser"
+      "expo-sharing"
     ],
     "scheme": "my-notes-app",
     "extra": {
       "router": {
-        "origin": false
+        "origin": false,
+        "asyncRoutes": {
+          "web": true
+        }
       },
       "eas": {
         "projectId": "Your Project ID"

@@ -1,12 +1,12 @@
 import { CustomAlert as Alert } from './CustomAlert';
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { createBackup, restoreFromBackup } from '../utils/backupRestore';
 import {
   isE2EEEnabled, setupE2EE, disableE2EE, changeE2EEPassphrase,
-  verifyE2EEPassphrase, setSessionPassphrase, getSessionPassphrase,
+  verifyE2EEPassphrase,
 } from '../utils/storage';
 import PasswordManager from './PasswordManager';
 import E2EESetupDialog from './E2EESetupDialog';

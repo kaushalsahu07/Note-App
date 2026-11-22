@@ -1,13 +1,13 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, BackHandler } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import { loadArchivedNotes, unarchiveNotes, deleteNotes, Note, updateNote } from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
-  FadeInDown, FadeInUp, FadeOutDown, ZoomIn,
+  FadeInDown, FadeInUp, FadeOutDown,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 import { Colors } from '../constants/Colors';
@@ -18,7 +18,6 @@ export default function ArchiveScreen() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -41,14 +40,11 @@ export default function ArchiveScreen() {
   }, [isSelectionMode]);
 
   const loadArchive = async () => {
-    setIsLoading(true);
     try {
       const archived = await loadArchivedNotes();
       setNotes(archived);
     } catch (e) {
       Alert.alert('Error', 'Failed to load archived notes');
-    } finally {
-      setIsLoading(false);
     }
   };
 

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, AppStateStatus } from 'react-native';
 import { encrypt, decrypt, isEncryptedData } from './encryption';
-import { getSessionPassphrase, isE2EEEnabled, notifyNotesChanged, replaceAllNotesAndPasswords } from './storage';
+import { getSessionPassphrase, isE2EEEnabled, replaceAllNotesAndPasswords } from './storage';
 import {
   getSyncApiUrl, getAuthToken, setAuthToken, setSyncEmail,
   clearAllSyncData, setLastSyncTime, getLastSyncTime,

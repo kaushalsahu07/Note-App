@@ -1,25 +1,23 @@
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, Dimensions, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Modal, TextInput, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
-import { loadNotes, togglePinNote, togglePinNotes, Note, deleteNotes, deleteNote, updateNote, setNotesChangeListener, archiveNotes } from '../utils/storage';
+import { loadNotes, togglePinNotes, Note, deleteNotes, updateNote, setNotesChangeListener, archiveNotes } from '../utils/storage';
 import Settings from '../components/Settings';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   FadeInDown, FadeInUp, FadeOutDown, LinearTransition, ZoomIn,
-  useSharedValue, useAnimatedStyle, withSpring, withTiming,
-  interpolate, Extrapolation
+  useSharedValue, useAnimatedStyle, withSpring,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 
 const USERNAME_KEY = 'user_name';
-const { width } = Dimensions.get('window');
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -27,7 +25,6 @@ export default function NotesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [username, setUsername] = useState('');
   const [showUsernameModal, setShowUsernameModal] = useState(false);
@@ -75,14 +72,11 @@ export default function NotesScreen() {
   };
 
   const loadStoredNotes = async () => {
-    setIsLoading(true);
     try {
       const storedNotes = await loadNotes();
       setNotes(storedNotes);
     } catch (e) {
       Alert.alert('Error', 'Failed to load notes');
-    } finally {
-      setIsLoading(false);
     }
   };
 

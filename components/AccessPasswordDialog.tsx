@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TextInput, Modal, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';

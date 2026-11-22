@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from '../../utils/passwordUtils';
 import { Ionicons } from '@expo/vector-icons';
 import AccessPasswordDialog from '../../components/AccessPasswordDialog';
 import PasswordProtectionDialog from '../../components/PasswordProtectionDialog';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
